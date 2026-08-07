@@ -2151,6 +2151,7 @@ function syncMiniPlayer() {
     hasTrack &&
     (activeTrack.classList.contains("is-playing") ||
       activeTrack.classList.contains("is-play-pending"));
+  const isAudioPlaying = hasTrack && !activeAudio.paused;
 
   miniPlayer.classList.toggle("is-visible", isVisible);
   miniPlayer.classList.toggle("is-playing", isPlaying);
@@ -2160,7 +2161,7 @@ function syncMiniPlayer() {
   );
   miniPlayer.classList.toggle("is-shuffled", isShuffleEnabled);
   miniPlayer.setAttribute("aria-hidden", String(!isVisible));
-  syncMediaSession(entry, hasTrack, isPlaying);
+  syncMediaSession(entry, hasTrack, isAudioPlaying);
 
   if (miniToggle) {
     miniToggle.setAttribute("aria-label", isPlaying ? "pause" : "play");
