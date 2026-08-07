@@ -2079,31 +2079,6 @@ function initMediaSession() {
     playAdjacentTrack(1);
   });
 
-  setMediaSessionHandler("seekbackward", (details) => {
-    if (!activeAudio || !activeTrack) {
-      return;
-    }
-
-    const offset = details?.seekOffset || 10;
-    activeAudio.currentTime = Math.max(0, activeAudio.currentTime - offset);
-    updateTrackProgress(activeTrack, activeAudio);
-    updateMediaSessionPosition(activeTrack, activeAudio, true);
-  });
-
-  setMediaSessionHandler("seekforward", (details) => {
-    if (!activeAudio || !activeTrack) {
-      return;
-    }
-
-    const duration = Number(activeTrack.dataset.duration) || activeAudio.duration || 0;
-    const offset = details?.seekOffset || 10;
-    activeAudio.currentTime = duration
-      ? Math.min(duration, activeAudio.currentTime + offset)
-      : activeAudio.currentTime + offset;
-    updateTrackProgress(activeTrack, activeAudio);
-    updateMediaSessionPosition(activeTrack, activeAudio, true);
-  });
-
   setMediaSessionHandler("seekto", (details) => {
     if (!activeAudio || !activeTrack || !Number.isFinite(details?.seekTime)) {
       return;
