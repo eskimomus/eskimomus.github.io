@@ -2078,21 +2078,6 @@ function initMediaSession() {
   setMediaSessionHandler("nexttrack", () => {
     playAdjacentTrack(1);
   });
-
-  setMediaSessionHandler("seekto", (details) => {
-    if (!activeAudio || !activeTrack || !Number.isFinite(details?.seekTime)) {
-      return;
-    }
-
-    if (details.fastSeek && typeof activeAudio.fastSeek === "function") {
-      activeAudio.fastSeek(details.seekTime);
-    } else {
-      activeAudio.currentTime = details.seekTime;
-    }
-
-    updateTrackProgress(activeTrack, activeAudio);
-    updateMediaSessionPosition(activeTrack, activeAudio, true);
-  });
 }
 
 function isActiveSourceVisible() {
