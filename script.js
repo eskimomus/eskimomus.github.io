@@ -1985,10 +1985,6 @@ function updateMediaSessionMetadata(entry) {
     title: formatMediaSessionTitle(entry),
     artist: "Eskimo",
     album: entry.playerTitle,
-    artwork: [
-      { src: "./assets/favicon.png", sizes: "32x32", type: "image/png" },
-      { src: "./assets/favicon.webp", sizes: "32x32", type: "image/webp" },
-    ],
   });
 
   return true;
