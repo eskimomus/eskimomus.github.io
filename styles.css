@@ -171,6 +171,17 @@ html.is-chromium .theme-contact .stage {
   user-select: none;
 }
 
+@supports (text-box-trim: both) {
+  .logo-text {
+    line-height: normal;
+  }
+
+  .logo-text span {
+    text-box-trim: both;
+    text-box-edge: cap alphabetic;
+  }
+}
+
 .stripe-field {
   position: absolute;
   top: 0;
