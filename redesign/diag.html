@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>matt swan — checks</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #242228;
+        color: #fff2e5;
+        font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      h1 {
+        font-size: 17px;
+        margin: 0 0 4px;
+      }
+      p.note {
+        color: #9c8979;
+        margin: 0 0 20px;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        padding: 5px 0;
+        border-bottom: 1px solid #3a373f;
+      }
+      .tag {
+        flex: 0 0 52px;
+        font-weight: 700;
+      }
+      .ok {
+        color: #7fae5f;
+      }
+      .bad {
+        color: #e2703f;
+      }
+      .what {
+        flex: 1;
+      }
+      .detail {
+        color: #9c8979;
+      }
+      /* the same two shapes the site draws, side by side at a size where the
+         edge is easy to judge */
+      .samples {
+        display: flex;
+        gap: 28px;
+        align-items: flex-start;
+        margin: 26px 0 8px;
+        flex-wrap: wrap;
+      }
+      .sample {
+        text-align: center;
+        color: #9c8979;
+      }
+      .swatch {
+        width: 190px;
+        height: 190px;
+        background: #b18050;
+        margin-bottom: 6px;
+      }
+      .swatch.svg {
+        mask-image: url("../assets/circle-blob.svg");
+        mask-size: 100% 100%;
+        mask-repeat: no-repeat;
+        -webkit-mask-image: url("../assets/circle-blob.svg");
+        -webkit-mask-size: 100% 100%;
+        -webkit-mask-repeat: no-repeat;
+      }
+      .swatch.raster {
+        mask-size: 100% 100%;
+        mask-repeat: no-repeat;
+        -webkit-mask-size: 100% 100%;
+        -webkit-mask-repeat: no-repeat;
+      }
+      img.swatch {
+        background: none;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>matt swan — browser checks</h1>
+    <p class="note">
+      Screenshot this page. The list says which steps the browser allowed; the
+      three circles below show the same outline three ways — the third is what
+      the site now uses for artwork.
+    </p>
+    <div id="report"></div>
+
+    <div class="samples">
+      <div class="sample"><div class="swatch svg"></div>1 · SVG as a CSS mask</div>
+      <div class="sample"><div class="swatch raster" id="rasterSwatch"></div>2 · rasterised mask</div>
+      <div class="sample"><img class="swatch" id="bakedSwatch" alt="" />3 · baked into the image</div>
+    </div>
+
+    <h1 style="margin-top: 30px">the same edge at the size the site actually draws it</h1>
+    <p class="note" id="sizeNote"></p>
+    <div class="samples" id="zoomed"></div>
+
+    <h1 style="margin-top: 30px">what the site itself managed</h1>
+    <p class="note">read straight out of the real page, loaded below</p>
+    <div id="live"></div>
+    <iframe
+      id="page"
+      src="./index.html"
+      style="width: 320px; height: 200px; border: 1px solid #3a373f; margin-top: 10px"
+      title="the site"
+    ></iframe>
+
+    <script>
+      const report = document.getElementById("report");
+      const line = (ok, what, detail) => {
+        const row = document.createElement("div");
+        row.className = "row";
+        row.innerHTML =
+          `<span class="tag ${ok ? "ok" : "bad"}">${ok ? "ok" : "FAIL"}</span>` +
+          `<span class="what"></span>`;
+        row.querySelector(".what").textContent = what + (detail ? " — " + detail : "");
+        report.appendChild(row);
+      };
+
+      line(true, "browser", navigator.userAgent);
+      line(true, "device pixel ratio", String(window.devicePixelRatio));
+
+      for (const [what, value] of [
+        ["mask-image", "mask-image: url(a.svg)"],
+        ["-webkit-mask-image", "-webkit-mask-image: url(a.svg)"],
+        ["relative colour syntax (hover colour)", "color: oklch(from red l c h)"],
+        ["color-mix", "color: color-mix(in oklch, red 50%, blue)"],
+        ["overscroll-behavior", "overscroll-behavior: none"],
+      ]) {
+        const [prop, val] = value.split(": ");
+        line(CSS.supports(prop, val), what);
+      }
+      line(typeof CSS.registerProperty === "function", "@property (animated palette)");
+
+      (async () => {
+        // 1. can an SVG be rasterised at all?
+        // the naive way: ask drawImage to scale a 66px file up to 512
+        let naive = null;
+        // the way the site does it now: re-size the SVG inside the file first
+        let canvas = null;
+        try {
+          const img = new Image();
+          img.src = "../assets/circle-blob.svg";
+          await img.decode();
+          naive = document.createElement("canvas");
+          naive.width = 512;
+          naive.height = 512;
+          naive.getContext("2d").drawImage(img, 0, 0, 512, 512);
+
+          const text = await fetch("../assets/circle-blob.svg").then((r) => r.text());
+          const sized = text.replace('width="66"', 'width="512"').replace('height="66"', 'height="512"');
+          const big = new Image();
+          big.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(sized)));
+          await big.decode();
+          canvas = document.createElement("canvas");
+          canvas.width = 512;
+          canvas.height = 512;
+          canvas.getContext("2d").drawImage(big, 0, 0, 512, 512);
+          line(true, "rasterise the SVG at 512px", `intrinsic ${img.naturalWidth}px, resized ${big.naturalWidth}px`);
+        } catch (error) {
+          line(false, "rasterise the SVG at 512px", error.name + ": " + error.message);
+        }
+
+        // 2. can that canvas be read back? (a tainted canvas throws here, and
+        //    that is what would leave the site on the raw SVG masks)
+        let dataUrl = null;
+        try {
+          dataUrl = canvas.toDataURL("image/png");
+          document.getElementById("rasterSwatch").style.webkitMaskImage = `url("${dataUrl}")`;
+          document.getElementById("rasterSwatch").style.maskImage = `url("${dataUrl}")`;
+          line(true, "read the canvas back (toDataURL)", Math.round(dataUrl.length / 1024) + " KB");
+        } catch (error) {
+          line(false, "read the canvas back (toDataURL)", error.name + ": " + error.message);
+        }
+
+        // 3. the artwork bake: photo + outline, exported as its own image
+        try {
+          const art = new Image();
+          art.src = "./previews/kletka.webp";
+          await art.decode();
+          const off = document.createElement("canvas");
+          off.width = 400;
+          off.height = 400;
+          const c = off.getContext("2d");
+          c.drawImage(art, 0, 0, 400, 400);
+          c.globalCompositeOperation = "destination-in";
+          c.drawImage(canvas, 0, 0, 400, 400);
+          const blob = await new Promise((resolve, reject) => {
+            off.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))), "image/png");
+          });
+          document.getElementById("bakedSwatch").src = URL.createObjectURL(blob);
+          line(true, "bake the outline into the artwork", Math.round(blob.size / 1024) + " KB");
+        } catch (error) {
+          line(false, "bake the outline into the artwork", error.name + ": " + error.message);
+        }
+
+        // 4. does an ancestor's opacity actually dim a transformed child?
+        const probe = document.createElement("div");
+        probe.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0.5";
+        const child = document.createElement("div");
+        child.style.cssText = "width:10px;height:10px;background:#fff;transform:scale(0.9)";
+        probe.appendChild(child);
+        document.body.appendChild(probe);
+        line(
+          getComputedStyle(child).transform !== "none",
+          "transform inside a faded panel",
+          "the tab crossfade relies on the group opacity covering these",
+        );
+        probe.remove();
+
+        // The page draws the artwork at 190 design px times the window's
+        // scale — much smaller than the 190 CSS px above. Rasterise the same
+        // outline three ways at exactly that device size and blow each up
+        // with no smoothing, so the real pixels are visible.
+        const scale = document.documentElement.clientWidth / 1920;
+        const dpr = window.devicePixelRatio || 1;
+        const deviceSize = Math.round(190 * scale * dpr);
+        document.getElementById("sizeNote").textContent =
+          `190 design px x ${scale.toFixed(3)} scale x ${dpr} dpr = ${deviceSize} device px, shown 4x with no smoothing`;
+
+        const zoomed = document.getElementById("zoomed");
+        const showPixels = async (label, drawAtSize) => {
+          const small = document.createElement("canvas");
+          small.width = deviceSize;
+          small.height = deviceSize;
+          await drawAtSize(small.getContext("2d"), deviceSize);
+          const big = document.createElement("canvas");
+          big.width = deviceSize * 4;
+          big.height = deviceSize * 4;
+          const bx = big.getContext("2d");
+          bx.imageSmoothingEnabled = false;
+          bx.drawImage(small, 0, 0, big.width, big.height);
+          big.style.cssText = "display:block;background:#111;image-rendering:pixelated;margin-bottom:6px";
+          const cell = document.createElement("div");
+          cell.className = "sample";
+          const cap = document.createElement("div");
+          cap.textContent = label;
+          cell.append(big, cap);
+          zoomed.appendChild(cell);
+        };
+
+        const svgImage = new Image();
+        svgImage.src = "../assets/circle-blob.svg";
+        await svgImage.decode();
+        await showPixels("1 · SVG drawn straight at that size", (c, size) => {
+          c.drawImage(svgImage, 0, 0, size, size);
+        });
+        await showPixels("2a · raster made the old way (bug)", (c, size) => {
+          c.imageSmoothingQuality = "high";
+          c.drawImage(naive, 0, 0, size, size);
+        });
+        await showPixels("2b · raster made the new way", (c, size) => {
+          c.imageSmoothingQuality = "high";
+          c.drawImage(canvas, 0, 0, size, size);
+        });
+        const bakedImage = document.getElementById("bakedSwatch");
+        await showPixels("3 · baked artwork, scaled down", async (c, size) => {
+          if (!bakedImage.src) return;
+          await bakedImage.decode();
+          c.imageSmoothingQuality = "high";
+          c.drawImage(bakedImage, 0, 0, size, size);
+        });
+
+        // and what the real page managed, read out of it directly
+        const frame = document.getElementById("page");
+        const readPage = () => {
+          setTimeout(() => {
+            const live = document.getElementById("live");
+            try {
+              const r = frame.contentWindow.maskReport;
+              const imgs = [...frame.contentDocument.querySelectorAll("img[data-mask-token]")];
+              const baked = imgs.filter((i) => i.src.startsWith("blob:")).length;
+              const masked = imgs.filter(
+                (i) => frame.contentWindow.getComputedStyle(i).maskImage !== "none",
+              ).length;
+              live.textContent =
+                `masks rasterised ${r.rasterised}/12, exported ${r.exported}/12, ` +
+                `artwork baked ${r.baked} (of ${imgs.length}), still wearing a CSS mask ${masked}` +
+                (r.failed.length ? ` — failures: ${r.failed.join("; ")}` : "") +
+                (r.bakeFailed.length ? ` — bake failures: ${r.bakeFailed.join("; ")}` : "");
+              live.className = r.failed.length || r.bakeFailed.length || baked !== imgs.length ? "bad" : "ok";
+            } catch (error) {
+              live.textContent = "could not read the page: " + error.name + " " + error.message;
+              live.className = "bad";
+            }
+          }, 2500);
+        };
+        // the frame may already be loaded by the time this runs
+        if (frame.contentDocument && frame.contentDocument.readyState === "complete") readPage();
+        else frame.addEventListener("load", readPage);
+      })();
+    </script>
+  </body>
+</html>
