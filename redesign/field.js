@@ -472,15 +472,255 @@ async function makeProjectBlob(maskCanvas, imgSrc, size) {
 // doesn't just pulse as one uniform blob.
 // ---------------------------------------------------------------------------
 
-const audioEl = new Audio();
-audioEl.loop = false; // a real playlist runs on — see the "ended" handler below
-audioEl.volume = 0.6;
+// ---------------------------------------------------------------------------
+// The deck
+//
+// This was an <audio> element until Safari was actually measured. Safari does
+// not honour playbackRate on a media element: asked for 0.5 the playhead
+// advanced at 0.215, asked for 0.125 or 0.09 it floored at 0.16 and refused to
+// go slower, and the output collapsed from a level of 10.7 to 1.15 — near
+// silence. No error, no warning; it reports back whatever rate you set,
+// including 17. So the wind-down came out there as a stuttering fade instead
+// of a drop in pitch. Chrome does it perfectly, which is how it got shipped.
+//
+// AudioBufferSourceNode.playbackRate is a different thing entirely: a real
+// AudioParam that resamples, so pitch follows speed exactly as a record's
+// does, sample-accurately and identically in every browser. Measured in the
+// same Safari: a 2s sweep ran 1 → 0.88 → 0.75 → 0.62 → 0.49 → 0.36 → 0.24 →
+// 0.11 without a stumble, audible the whole way (quietest 6.9 against 25.7 at
+// full speed), with the spectral centroid falling 15.9 → 2.8 alongside it.
+//
+// The cost is that a buffer source is not a media element: it has no
+// currentTime, no duration, no pause, and it can only be started once. So the
+// deck below puts that surface back — the same properties, methods and events
+// the rest of the player already speaks to — with Web Audio underneath. That
+// way one file changes rather than sixty-four call sites.
+// ---------------------------------------------------------------------------
 
 let audioCtx = null;
 let analyser = null;
 let freqData = null;
-let sourceNode = null;
 let gainNode = null;
+
+// Per-frame rate writes are glided over this long rather than stepped, so the
+// resampling ratio never jumps between one frame and the next.
+const RATE_GLIDE = 0.03;
+
+// How long a jump of the playhead is held "in flight". The jump itself is
+// instant now, but the sound is ducked across it, and this is what gives that
+// duck room — see the currentTime setter.
+const SEEK_SETTLE_MS = 25;
+
+function makeDeck() {
+  const listeners = new Map();
+  let src = null;
+  let buffer = null;
+  let node = null;
+  let position = 0; // seconds into the buffer
+  let clock = 0; // audio-clock time the position was last brought up to date
+  let running = false; // a node is sounding
+  let wantRate = 1;
+  let loadToken = 0;
+  let loading = false;
+  let ended = false;
+  let stopping = false; // a stop we asked for, so onended isn't the track ending
+  let seekingUntil = 0;
+
+  const emit = (type) => {
+    for (const fn of listeners.get(type) || []) fn({ type });
+  };
+
+  // Everything that reads the playhead comes through here, so the position is
+  // integrated against the audio clock at whatever rate is actually in force —
+  // during a sweep that is a moving target, which is why it can't simply be
+  // "started at T, so it must be at now - T".
+  const advance = () => {
+    const now = audioCtx ? audioCtx.currentTime : 0;
+    if (running && node) {
+      position += (now - clock) * node.playbackRate.value;
+      if (buffer && position >= buffer.duration) position = buffer.duration;
+    }
+    clock = now;
+  };
+
+  const detach = () => {
+    if (!node) return;
+    stopping = true;
+    node.onended = null;
+    try {
+      node.stop();
+    } catch {
+      /* already stopped */
+    }
+    node.disconnect();
+    node = null;
+    stopping = false;
+  };
+
+  const attach = (offset) => {
+    if (!buffer || !audioCtx) return;
+    detach();
+    node = audioCtx.createBufferSource();
+    node.buffer = buffer;
+    node.playbackRate.value = wantRate;
+    node.connect(gainNode);
+    node.onended = () => {
+      if (stopping) return;
+      // the buffer ran out — the element's own order is pause, then ended, and
+      // the queue's advance leans on that
+      running = false;
+      ended = true;
+      deck.dispatch("pause");
+      deck.dispatch("ended");
+    };
+    clock = audioCtx.currentTime;
+    node.start(0, Math.max(0, Math.min(offset, buffer.duration - 0.01)));
+    running = true;
+    ended = false;
+  };
+
+  const load = async (url) => {
+    const token = ++loadToken;
+    loading = true;
+    buffer = null;
+    position = 0;
+    ended = false;
+    deck.dispatch("loadstart");
+    try {
+      const bytes = await fetch(url).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.arrayBuffer();
+      });
+      // Safari only reliably takes the callback form of decodeAudioData
+      const decoded = await new Promise((resolve, reject) => {
+        const maybe = audioCtx.decodeAudioData(bytes, resolve, reject);
+        if (maybe && maybe.then) maybe.then(resolve, reject);
+      });
+      if (token !== loadToken) return; // a newer track was asked for meanwhile
+      buffer = decoded;
+      loading = false;
+      deck.dispatch("loadeddata");
+      // play() was pressed while this was still loading — start it now, and
+      // say so: "playing" is what brings the sound back up out of the duck
+      // the swap went into, and without it the new track ran on in silence.
+      if (running) {
+        attach(position);
+        deck.dispatch("playing");
+      }
+    } catch {
+      if (token !== loadToken) return;
+      loading = false;
+      deck.dispatch("error");
+    }
+  };
+
+  const deck = {
+    // --- the element's surface -------------------------------------------
+    get src() {
+      return src;
+    },
+    set src(value) {
+      const url = new URL(value, location.href).href;
+      if (url === src) return;
+      src = url;
+      detach();
+      running = false;
+      ensureAudioGraph();
+      load(url);
+    },
+    get currentTime() {
+      advance();
+      return position;
+    },
+    set currentTime(seconds) {
+      advance();
+      position = Math.max(0, Math.min(seconds, buffer ? buffer.duration : seconds));
+      ended = false;
+      if (running) attach(position);
+      // A media element reports `seeking` until the jump lands and only then
+      // fires `seeked`. Here it is instant — but the click suppression around
+      // it needs the sound to be down *over* the jump, so the same shape is
+      // kept and the landing is held off long enough for the duck to take.
+      seekingUntil = performance.now() + SEEK_SETTLE_MS;
+      setTimeout(() => deck.dispatch("seeked"), SEEK_SETTLE_MS);
+    },
+    get duration() {
+      return buffer ? buffer.duration : NaN;
+    },
+    get paused() {
+      return !running;
+    },
+    get ended() {
+      return ended;
+    },
+    get seeking() {
+      return performance.now() < seekingUntil;
+    },
+    // 4 = HAVE_ENOUGH_DATA, 1 = HAVE_METADATA-ish while it loads, 0 = nothing
+    get readyState() {
+      return buffer ? 4 : loading ? 1 : 0;
+    },
+    get playbackRate() {
+      return node ? node.playbackRate.value : wantRate;
+    },
+    set playbackRate(rate) {
+      wantRate = rate;
+      if (!node || !audioCtx) return;
+      advance(); // bank the position at the old rate before changing it
+      const p = node.playbackRate;
+      const t = audioCtx.currentTime;
+      p.cancelScheduledValues(t);
+      p.setValueAtTime(p.value, t);
+      p.linearRampToValueAtTime(rate, t + RATE_GLIDE);
+    },
+    // resampling always carries the pitch with it — that is the whole point —
+    // so these exist only so the callers that set them keep working
+    preservesPitch: false,
+    preload: "auto",
+    loop: false,
+    volume: 1,
+
+    play() {
+      ensureAudioGraph();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      if (!running) {
+        running = true;
+        deck.dispatch("play");
+        if (buffer) {
+          attach(position);
+          deck.dispatch("playing");
+        }
+        // still loading: attach() runs from load() the moment it lands
+      }
+      return Promise.resolve();
+    },
+    pause() {
+      if (!running) return;
+      advance();
+      detach();
+      running = false;
+      deck.dispatch("pause");
+    },
+
+    addEventListener(type, fn) {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type).add(fn);
+    },
+    removeEventListener(type, fn) {
+      listeners.get(type)?.delete(fn);
+    },
+    dispatch: emit,
+
+    // --- what only the deck can answer ------------------------------------
+    // the loop calls this so the playhead stays current even when nothing has
+    // read currentTime this frame
+    tick: advance,
+  };
+
+  return deck;
+}
+
+const audioEl = makeDeck();
 
 // A media element cut off mid-waveform pops, and so does one that starts
 // mid-waveform — the jump from silence to wherever the signal happens to be
@@ -489,22 +729,30 @@ let gainNode = null;
 // the discontinuity, far too short to hear as a fade.
 const FADE_MS = 35;
 
+// The far end of the graph, built once. Each track's buffer source is created
+// per play and connects into gainNode, so there is no permanent source node
+// any more — the deck owns that end.
 function ensureAudioGraph() {
   if (audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  sourceNode = audioCtx.createMediaElementSource(audioEl);
   gainNode = audioCtx.createGain();
   gainNode.gain.value = 0; // brought up by the "playing" handler below
+  // the element's own 0.6 used to live on `volume`; with nothing but the graph
+  // left it belongs here, folded into the same node the fades ride on
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 256;
   analyser.smoothingTimeConstant = 0.8;
   freqData = new Uint8Array(analyser.frequencyBinCount);
   // ahead of the analyser, so the circles see the same fade the ears do
-  sourceNode.connect(gainNode);
   gainNode.connect(analyser);
   analyser.connect(audioCtx.destination);
 }
 
+// What "full volume" means for the fades — the level the element carried on
+// `volume` before, now the top of every gain ramp.
+const FULL_GAIN = 0.6;
+
+// `to` is 0..1 — callers ask for silence or for full, and full is FULL_GAIN.
 function fadeGain(to, ms = FADE_MS) {
   if (!gainNode) return;
   const now = audioCtx.currentTime;
@@ -513,7 +761,7 @@ function fadeGain(to, ms = FADE_MS) {
   // value it was last set to
   level.cancelScheduledValues(now);
   level.setValueAtTime(level.value, now);
-  level.linearRampToValueAtTime(to, now + ms / 1000);
+  level.linearRampToValueAtTime(to * FULL_GAIN, now + ms / 1000);
 }
 
 // Sound is only ever brought up once it is genuinely running: "play" fires the
