@@ -1,1 +1,11 @@
 .DS_Store
+admin/.backups/
+node_modules/
+
+# The drop folder the mp3s were imported from. Every track in it is already
+# under assets/audio/ with the name the site uses, so committing it would add
+# ~200MB of duplicates to a repo that is also the published site.
+new music/
+
+# local agent/editor config, not part of the site
+.claude/

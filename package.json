@@ -1,0 +1,9 @@
+{
+  "name": "matt-swan-site",
+  "private": true,
+  "type": "module",
+  "description": "matt-swan.art — the site, and the local admin that edits its content",
+  "scripts": {
+    "admin": "node admin/server.mjs"
+  }
+}

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>matt swan — admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Tomorrow:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <span class="brand">matt swan <span class="dim">/ admin</span></span>
+      <nav class="tabs" id="tabs">
+        <button class="tab is-active" type="button" data-tab="feed">feed</button>
+        <button class="tab" type="button" data-tab="projects">projects</button>
+        <button class="tab" type="button" data-tab="music">all music</button>
+      </nav>
+      <span class="spacer"></span>
+      <span class="status" id="status"></span>
+      <a class="ghost" href="/redesign/index.html" target="_blank" rel="noreferrer">open site</a>
+      <button class="save" id="save" type="button" disabled>save</button>
+    </header>
+
+    <main class="layout">
+      <aside class="list" id="list"></aside>
+      <section class="form" id="form"></section>
+    </main>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <script src="./admin.js"></script>
+  </body>
+</html>

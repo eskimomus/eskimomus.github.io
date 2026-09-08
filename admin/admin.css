@@ -1,0 +1,567 @@
+/* The editor is a tool, not the site: plain, dense, legible at a glance. It
+   borrows the site's palette so the previews sit on the right ground, and the
+   site's two faces — Tomorrow for the interface, ZCOOL KuaiLe wherever a
+   value is set in it on the page, so a title reads here as it will there. */
+
+:root {
+  --bg: #1c1b20;
+  --panel: #242228;
+  --line: #35323a;
+  --ink: #fff2e5;
+  --dim: #9c8979;
+  --gold: #b18050;
+  --hot: #dbab7d;
+  --bad: #e35858;
+  --ok: #84b150;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 "Tomorrow", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* the display face, for the strings the site sets in it */
+.brand,
+.item .name,
+.sub-head .title {
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.dim {
+  color: var(--dim);
+}
+
+/* --- top bar -------------------------------------------------------------- */
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tab:hover {
+  color: var(--hot);
+}
+
+.tab.is-active {
+  background: var(--bg);
+  color: var(--gold);
+}
+
+.status {
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.status.is-dirty {
+  color: var(--hot);
+}
+
+.save,
+.ghost,
+button.mini {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.save {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #1c1b20;
+  font-weight: 600;
+}
+
+.save:disabled {
+  background: none;
+  color: var(--dim);
+  border-color: var(--line);
+  cursor: default;
+}
+
+.ghost:hover,
+button.mini:hover {
+  border-color: var(--gold);
+  color: var(--hot);
+}
+
+/* --- layout --------------------------------------------------------------- */
+
+.layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  align-items: start;
+  min-height: calc(100vh - 53px);
+}
+
+.list {
+  position: sticky;
+  top: 53px;
+  border-right: 1px solid var(--line);
+  padding: 12px;
+  max-height: calc(100vh - 53px);
+  overflow: auto;
+}
+
+.form {
+  padding: 20px 24px 80px;
+  max-width: 900px;
+}
+
+/* --- the item list -------------------------------------------------------- */
+
+.group-label {
+  color: var(--dim);
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  font-size: 12px;
+  margin: 14px 0 6px;
+}
+
+.group-label:first-child {
+  margin-top: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--panel);
+}
+
+.item.is-active {
+  background: var(--panel);
+  border-color: var(--gold);
+}
+
+.item .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item .badge {
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.item-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.item:hover .item-actions,
+.item.is-active .item-actions {
+  opacity: 1;
+}
+
+.item-actions button {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+  padding: 0 3px;
+  font: inherit;
+  line-height: 1;
+}
+
+.item-actions button:hover {
+  color: var(--hot);
+}
+
+.add {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  cursor: pointer;
+}
+
+.add:hover {
+  border-color: var(--gold);
+  color: var(--hot);
+}
+
+/* --- fields --------------------------------------------------------------- */
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field > label,
+.legend {
+  display: block;
+  color: var(--dim);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  margin-bottom: 5px;
+}
+
+input[type="text"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+/* A title reads here as it will on the page. Stated after the block above,
+   whose `font: inherit` shorthand would otherwise reset the family. */
+input[type="text"].display {
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 16px;
+}
+
+.hint {
+  color: var(--dim);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.hint.danger {
+  color: var(--bad);
+}
+
+/* the calendar button the browser draws inside a date field */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(0.4);
+  cursor: pointer;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.row > * {
+  flex: 1;
+}
+
+.row > .shrink {
+  flex: 0 0 auto;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.check input {
+  width: auto;
+}
+
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  margin: 0 0 16px;
+}
+
+legend {
+  padding: 0 6px;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+/* --- repeatable rows ------------------------------------------------------ */
+
+.sub {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.sub-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sub-head .title {
+  flex: 1;
+  font-weight: 600;
+}
+
+/* Each track is its own card, numbered. They used to be told apart by a 14px
+   gap alone, and at three lines each — title and detail, then tags/genres/
+   tempo/pick, then the file path — a long album read as one wall of fields
+   with no telling where one track ended and the next began. */
+.tracks {
+  counter-reset: track;
+}
+
+.track {
+  counter-increment: track;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) 90px auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 10px 10px 8px 34px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+/* the number doubles as the handle for the reorder arrows: it says where the
+   track currently sits in the album */
+.track::before {
+  content: counter(track);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 26px;
+  padding: 10px 0 0;
+  text-align: center;
+  color: var(--dim);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.track:last-child {
+  margin-bottom: 0;
+}
+
+/* tags, genres and tempo, on their own line under the title */
+.track .meta {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) 76px 104px;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+/* 0 is worth spotting at a glance — that track is out of the shuffle */
+.track .meta .pick-state[data-off] {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
+.track .meta input,
+.track .meta select {
+  font-size: 13px;
+  padding: 5px 8px;
+}
+
+/* the free-text line with its picker of words already in use */
+.picker {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.picker input {
+  flex: 1;
+  min-width: 0;
+}
+
+.picker .pick {
+  flex: 0 0 auto;
+  width: 34px;
+  padding-left: 6px;
+  padding-right: 0;
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.picker .pick:hover {
+  color: var(--hot);
+  border-color: var(--gold);
+}
+
+.track .src {
+  grid-column: 1 / -1;
+  color: var(--dim);
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track.is-missing .src {
+  color: var(--bad);
+}
+
+.danger {
+  color: var(--bad);
+}
+
+/* --- artwork -------------------------------------------------------------- */
+
+.art {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.art img {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.art .none {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 1px dashed var(--line);
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+/* --- swatches ------------------------------------------------------------- */
+
+.swatches {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch input[type="color"] {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+}
+
+.swatch input[type="text"] {
+  width: 92px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* --- toast ---------------------------------------------------------------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  color: var(--ink);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  max-width: 70vw;
+}
+
+.toast.is-bad {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.empty {
+  color: var(--dim);
+  padding: 40px 0;
+}
