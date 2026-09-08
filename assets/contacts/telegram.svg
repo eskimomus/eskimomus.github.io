@@ -1,0 +1,23 @@
+<svg width="78" height="79" viewBox="0 0 78 79" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M14.5648 39.1684C14.2621 61.4962 23.205 64.386 43.5996 63.1461C57.6484 64.2298 63.1645 53.5883 63.2035 41.0039C63.965 28.6831 60.1673 13.1113 44.8297 14.4195C25.6847 14.7612 13.6763 16.7041 14.5648 39.1684ZM48.0417 77.5952C26.1142 79.6356 0.730752 76.492 0.428117 49.0485C-0.343137 36.4154 -0.753205 22.8742 5.43649 11.4125C12.0265 0.204776 23.0097 0.673393 34.4323 0.409759C44.4783 0.00947005 54.8367 -0.859437 64.5215 2.43067C74.3918 5.84765 77.0766 13.2968 76.8618 23.0402C77.2035 31.4264 77.5452 39.7932 77.3988 48.1894C76.9106 68.0862 68.2217 78.0541 48.0417 77.5952Z" fill="#4653AB"/>
+<rect x="10.5332" y="65.9128" width="57.2924" height="57.2924" transform="rotate(-90 10.5332 65.9128)" fill="#4653AB"/>
+<g filter="url(#filter0_g_48_65089)">
+<g clip-path="url(#clip0_48_65089)">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M54.3786 21.0442C56.5997 20.109 58.9809 21.9872 58.5887 24.3651L53.9563 52.4517C53.5096 55.1598 50.5353 56.7137 48.0508 55.3642C45.9718 54.2349 42.8872 52.4969 40.1073 50.6804C38.7192 49.7733 34.4686 46.8647 34.9911 44.7943C35.4378 43.0239 42.5834 36.3724 46.6668 32.4167C48.2707 30.8628 47.5402 29.9651 45.6459 31.3958C40.9468 34.9449 33.4025 40.3408 30.9077 41.8594C28.7065 43.1991 27.5572 43.4278 26.1863 43.1991C23.683 42.782 21.3621 42.136 19.4672 41.3506C16.9062 40.2889 17.031 36.7695 19.4655 35.7446L54.3786 21.0442Z" fill="white"/>
+</g>
+</g>
+<defs>
+<filter id="filter0_g_48_65089" x="12.9" y="10.9" width="51.2" height="51.2" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.019999999552965164 0.019999999552965164" numOctaves="3" seed="7799" />
+<feDisplacementMap in="shape" scale="2.2000000476837158" xChannelSelector="R" yChannelSelector="G" result="displacedImage" width="100%" height="100%" />
+<feMerge result="effect1_texture_48_65089">
+<feMergeNode in="displacedImage"/>
+</feMerge>
+</filter>
+<clipPath id="clip0_48_65089">
+<rect width="49" height="49" fill="white" transform="translate(14 12)"/>
+</clipPath>
+</defs>
+</svg>

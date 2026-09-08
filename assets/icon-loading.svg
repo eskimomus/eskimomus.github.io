@@ -1,0 +1,14 @@
+<!-- The buffering spinner. Drawn in the same cream the other transport icons
+     use, so it goes through rasterizeSvg's cream-to-mask pass with them and
+     takes its colour from the palette rather than carrying one. Unlike the
+     rest it has no wobble filter — it turns, and a turning outline that also
+     crawls reads as a mistake. -->
+<svg width="43" height="43" viewBox="0 0 43 43" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path
+    d="M2.64701 23.875C2.54987 23.0969 2.5 22.3044 2.5 21.5C2.5 11.0066 11.0065 2.5 21.5 2.5C27.4389 2.5 32.7413 5.22477 36.2255 9.49238M36.2255 9.49238V2.5M36.2255 9.49238V9.62483L29.1005 9.625M40.353 19.125C40.45 19.9031 40.5 20.6956 40.5 21.5C40.5 31.9935 31.9934 40.5 21.5 40.5C15.8252 40.5 10.7315 38.0122 7.25 34.0675M7.25 34.0675V33.375H14.375M7.25 34.0675V40.5"
+    stroke="#FFF2E5"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
