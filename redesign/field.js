@@ -522,6 +522,7 @@ function makeDeck() {
   let wantRate = 1;
   let loadToken = 0;
   let loading = false;
+  let loaded = 0; // 0..1 of the track being fetched, for the progress readout
   let ended = false;
   let stopping = false; // a stop we asked for, so onended isn't the track ending
   let seekingUntil = 0;
@@ -579,25 +580,86 @@ function makeDeck() {
     ended = false;
   };
 
+  // Decoded tracks, keyed by URL. Small on purpose: a three-minute track is
+  // around 60MB of float32, so this holds the one playing and the one queued
+  // up behind it and nothing else.
+  const decoded = new Map();
+  const CACHE_MAX = 2;
+
+  const remember = (url, audio) => {
+    decoded.set(url, audio);
+    while (decoded.size > CACHE_MAX) decoded.delete(decoded.keys().next().value);
+  };
+
+  // Read through the body rather than taking it in one piece, so how much has
+  // arrived can be reported while it arrives. Only the track being played asks
+  // for that; a prefetch passes no reporter and takes the simple path.
+  const fetchAndDecode = async (url, onProgress) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const total = Number(response.headers.get("content-length")) || 0;
+    let bytes;
+    // A body with no declared length can't be turned into a percentage, and
+    // nor can one the browser won't hand over as a stream — both fall back to
+    // reading it whole, and the indicator simply doesn't appear.
+    if (onProgress && total && response.body && response.body.getReader) {
+      const reader = response.body.getReader();
+      const chunks = [];
+      let received = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        onProgress(Math.min(1, received / total));
+      }
+      const joined = new Uint8Array(received);
+      let at = 0;
+      for (const chunk of chunks) {
+        joined.set(chunk, at);
+        at += chunk.length;
+      }
+      bytes = joined.buffer;
+    } else {
+      bytes = await response.arrayBuffer();
+      if (onProgress) onProgress(1);
+    }
+    // Safari only reliably takes the callback form of decodeAudioData
+    return new Promise((resolve, reject) => {
+      const maybe = audioCtx.decodeAudioData(bytes, resolve, reject);
+      if (maybe && maybe.then) maybe.then(resolve, reject);
+    });
+  };
+
   const load = async (url) => {
     const token = ++loadToken;
-    loading = true;
-    buffer = null;
     position = 0;
     ended = false;
+    // Already decoded — the change of record can land on the beat it was
+    // timed for instead of waiting on the network and the decoder.
+    if (decoded.has(url)) {
+      buffer = decoded.get(url);
+      loading = false;
+      deck.dispatch("loadstart");
+      deck.dispatch("loadeddata");
+      if (running) {
+        attach(position);
+        deck.dispatch("playing");
+      }
+      return;
+    }
+    loading = true;
+    loaded = 0;
+    buffer = null;
     deck.dispatch("loadstart");
     try {
-      const bytes = await fetch(url).then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.arrayBuffer();
-      });
-      // Safari only reliably takes the callback form of decodeAudioData
-      const decoded = await new Promise((resolve, reject) => {
-        const maybe = audioCtx.decodeAudioData(bytes, resolve, reject);
-        if (maybe && maybe.then) maybe.then(resolve, reject);
+      const audio = await fetchAndDecode(url, (fraction) => {
+        // a newer track was asked for meanwhile — its own load owns the readout
+        if (token === loadToken) loaded = fraction;
       });
       if (token !== loadToken) return; // a newer track was asked for meanwhile
-      buffer = decoded;
+      remember(url, audio);
+      buffer = audio;
       loading = false;
       deck.dispatch("loadeddata");
       // play() was pressed while this was still loading — start it now, and
@@ -660,6 +722,12 @@ function makeDeck() {
     get readyState() {
       return buffer ? 4 : loading ? 1 : 0;
     },
+    // How much of the current track has arrived, 0..1 — null whenever nothing
+    // is being fetched, which includes a track that was already prefetched and
+    // so never has a readout at all.
+    get loadProgress() {
+      return loading ? loaded : null;
+    },
     get playbackRate() {
       return node ? node.playbackRate.value : wantRate;
     },
@@ -715,6 +783,19 @@ function makeDeck() {
     // the loop calls this so the playhead stays current even when nothing has
     // read currentTime this frame
     tick: advance,
+
+    // Warm a track that is likely to be asked for next, so the change of
+    // record lands on the beat it was timed for. Quietly does nothing if it
+    // is already in hand or the graph isn't up yet.
+    prefetch(url) {
+      if (!url || !audioCtx) return;
+      const absolute = new URL(url, location.href).href;
+      if (decoded.has(absolute)) return;
+      fetchAndDecode(absolute).then(
+        (audio) => remember(absolute, audio),
+        () => {}, // a track that won't load is the error handler's problem, not this one's
+      );
+    },
   };
 
   return deck;
@@ -1903,11 +1984,33 @@ function drawTransportIcons(scaleMul) {
 // progress, so callers can clip *this* to the reveal wipe while still
 // drawing the cream fill and thumb unclipped afterwards — both stick out
 // past (or need to fade independently of) the backing's own reveal.
+// Changing the record puts the playhead back to nothing in one step, and the
+// bar snapping from wherever it was to empty is the one part of the change
+// that doesn't move with the rest of it. So across the drop it is eased back
+// instead — the tonearm returning rather than blinking home. Only then: a
+// seek is meant to be instant, and lagging it would put the thumb behind the
+// finger dragging it.
+let progressFrom = 0;
+let progressReturnUntil = 0;
+
+function beginProgressReturn(from) {
+  progressFrom = from;
+  progressReturnUntil = performance.now() + SWAP_DROP_MS;
+}
+
+function shownProgress(played) {
+  const now = performance.now();
+  if (now >= progressReturnUntil) return played;
+  const t = 1 - (progressReturnUntil - now) / SWAP_DROP_MS;
+  return progressFrom + (played - progressFrom) * easeInOutCubic(t);
+}
+
 function drawProgressBarBacking() {
   const { trackX, trackY, trackWidth, trackHeight } = player;
   const destY = trackY - trackHeight / 2;
   const duration = audioEl.duration;
-  const progress = duration && isFinite(duration) ? Math.max(0, Math.min(1, audioEl.currentTime / duration)) : 0;
+  const played = duration && isFinite(duration) ? Math.max(0, Math.min(1, audioEl.currentTime / duration)) : 0;
+  const progress = shownProgress(played);
 
   ctx.drawImage(playerBar.trackGold, trackX, destY, trackWidth, trackHeight);
 
@@ -2265,7 +2368,10 @@ function startAudio() {
 const MAX_LOAD_FAILURES = 3;
 let loadFailures = 0;
 
-audioEl.addEventListener("playing", () => (loadFailures = 0));
+audioEl.addEventListener("playing", () => {
+  loadFailures = 0;
+  warmNextTrack();
+});
 
 // One turn of the buffering spinner.
 const LOADING_SPIN_MS = 900;
@@ -2415,6 +2521,7 @@ function spinUp() {
   // has got to, over however much of the sweep is left, instead of dropping
   // it back to a standstill first.
   const caught = !audioEl.paused && windingDown;
+  stopSwap(); // starting outright takes over from a change of record
   windingDown = false;
   if (!caught) applyRate(TURNTABLE_FLOOR);
   // A caught record never stopped, so "playing" won't fire to bring the sound
@@ -2430,6 +2537,7 @@ function spinUp() {
 // is answered at once through setTransport, so nothing on screen waits for it.
 function spinDown() {
   if (audioEl.paused) return;
+  stopSwap(); // ...and so does stopping
   windingDown = true;
   setTransport(false);
   spin(TURNTABLE_FLOOR, SPIN_DOWN_MS, spinDownEase, () => {
@@ -2449,21 +2557,69 @@ function spinDown() {
 // than a stop.
 function keepSpinning() {
   stopSpin();
+  stopSwap();
   windingDown = false;
   applyRate(1);
 }
 
-// Replacing a source cuts the old track off wherever its waveform happens to
-// be. "loadstart" is dispatched as a queued task, so leaving the duck to that
-// listener only starts it after the cut has already been made — called just
-// before the swap, the ramp is already under way when it lands. The sound
-// comes back on "playing", once the new track is actually running.
-function duckForSwap(nextSrc) {
-  if (audioEl.paused) return;
-  // the same record again is not a swap, and ducking it would leave the sound
-  // down with no load to bring it back
-  if (audioEl.src === new URL(nextSrc, location.href).href) return;
-  fadeGain(0);
+// ---------------------------------------------------------------------------
+// Changing the record
+//
+// The same gesture starting and stopping use, in miniature: the platter is
+// lifted — pitch falling away under it — the record is changed at the bottom,
+// and the new one is dropped onto a stopped platter and comes up to speed.
+// Everything already keyed to the rate follows on its own: the cover slows,
+// halts and spins back up, and the wave goes with the level.
+//
+// It is asymmetric because the movement is: a record is taken off briskly and
+// set down more gently. And the sound is deliberately *not* cut during the
+// lift — the falling pitch is the whole point — so the duck happens only at
+// the join, where the two tracks would otherwise meet mid-waveform.
+const SWAP_LIFT_MS = 300;
+const SWAP_DROP_MS = 450;
+const SWAP_CUT_MS = 45; // silence across the join itself
+
+let swapping = false;
+let swapTimer = null;
+
+function stopSwap() {
+  if (swapTimer !== null) clearTimeout(swapTimer);
+  swapTimer = null;
+  swapping = false;
+}
+
+// `apply` is whatever actually changes the record — it runs at the bottom of
+// the lift, so the title, the artwork and the palette all land on the same
+// beat as the sound rather than ahead of it.
+function swapRecord(apply) {
+  stopSwap();
+  // nothing sounding: no platter to lift, just put the record on
+  if (!transportOn) {
+    keepSpinning();
+    apply();
+    return;
+  }
+  spin(TURNTABLE_FLOOR, SWAP_LIFT_MS, spinDownEase, () => {
+    fadeGain(0, SWAP_CUT_MS);
+    swapTimer = setTimeout(() => {
+      swapTimer = null;
+      const duration = audioEl.duration;
+      const wasAt = duration && isFinite(duration) ? audioEl.currentTime / duration : 0;
+      apply();
+      beginProgressReturn(Math.max(0, Math.min(1, wasAt)));
+      // the new record goes on at the standstill the old one was lifted at,
+      // and "playing" brings the sound back as soon as it is actually running
+      applyRate(TURNTABLE_FLOOR);
+      startAudio();
+      spin(1, SWAP_DROP_MS, spinUpEase);
+      // Cleared at the *start* of the drop, not the end: the cover has to rise
+      // over the same 450ms the pitch climbs. Left until the spin finished, it
+      // only began coming back once the sound was already up to speed.
+      swapping = false;
+    }, SWAP_CUT_MS);
+  });
+  // after spin(), which cancels whatever ran before it
+  swapping = true;
 }
 
 function toggleAudio() {
@@ -2496,16 +2652,12 @@ function switchToTrackIndex(index) {
   // element has already paused itself by the time this runs, and a record
   // still winding down is on its way to a stop even though it is not paused
   // yet. Neither is answered by asking the element.
-  const wasPlaying = transportOn;
-  duckForSwap(currentTrack().src);
-  audioEl.src = currentTrack().src;
-  announceTrack();
-  // prev/next and the end of a track are not a stop: the record stays at
-  // speed rather than spinning up again
-  if (wasPlaying) {
-    keepSpinning();
-    startAudio();
-  }
+  // prev/next and the end of a track are not a stop — they are a change of
+  // record, and swapRecord does the lift, the change and the drop.
+  swapRecord(() => {
+    audioEl.src = currentTrack().src;
+    announceTrack();
+  });
 }
 
 // A shuffle pick that honours the weight each entry carries — the page sets
@@ -2527,9 +2679,37 @@ function weightedIndex(exclude) {
   return playlist.length - 1;
 }
 
+// Which track comes after this one. On shuffle it used to be rolled at the
+// moment next was pressed, which left nothing to warm up in advance — so the
+// roll happens when the current track starts instead, and the answer is kept.
+// The shuffle is no less random for being decided a few minutes early.
+let queuedNext = -1;
+
+function decideNext() {
+  const n = playlist.length;
+  if (!n) return -1;
+  if (!shuffleOn || n < 2) return (trackIndex + 1) % n;
+  const pick = weightedIndex(trackIndex);
+  return pick >= 0 ? pick : (trackIndex + 1) % n;
+}
+
+// Decode the one that's coming while the current one plays, so changing the
+// record doesn't have to wait on the network and the decoder mid-gesture.
+function warmNextTrack() {
+  queuedNext = decideNext();
+  const entry = playlist[queuedNext];
+  if (entry && entry.src) audioEl.prefetch(entry.src);
+}
+
 function playAdjacentTrack(direction) {
   const n = playlist.length;
   if (!n) return;
+  if (direction > 0 && queuedNext >= 0) {
+    const next = queuedNext;
+    queuedNext = -1; // spent; the new track decides its own successor
+    switchToTrackIndex(next);
+    return;
+  }
   if (shuffleOn && n > 1) {
     const next = weightedIndex(trackIndex);
     switchToTrackIndex(next >= 0 ? next : (trackIndex + 1) % n);
@@ -2744,6 +2924,21 @@ async function loadFieldItems(items) {
   );
 }
 
+// Fills the blob cache for a set the field isn't showing yet, so switching to
+// it is instant rather than fetching and rasterizing on the way in — the
+// contacts icons were the last thing on the page still arriving late.
+//
+// Deliberately not loadFieldItems: that also replaces blobs.projects, which is
+// the set being drawn right now. And only items carrying an `icon`, because
+// those are cut to their own shape and so cache independently of the outline
+// they are handed; a `src` item's cache key doesn't include its mask, so
+// warming one with the wrong outline would poison it.
+async function warmFieldItems(items) {
+  await Promise.all(
+    items.filter((item) => item.icon).map((item) => makeFieldBlob(item, null, BLOB_RASTER_SIZE)),
+  );
+}
+
 function domReady() {
   if (document.readyState !== "loading") return Promise.resolve();
   return new Promise((resolve) => document.addEventListener("DOMContentLoaded", resolve, { once: true }));
@@ -2859,6 +3054,11 @@ function loop() {
       // on this rather than on a fixed clock
       sounding: !audioEl.paused,
       rate: audioEl.paused ? 0 : spinRate,
+      // mid-change of record, so the cover can be taken off and put back on
+      // the same beat as the sound — see renderRecordSwap
+      swapping,
+      // how much of the track has arrived, for the readout beside the title
+      loadProgress: audioEl.loadProgress,
     });
   }
 
@@ -2947,6 +3147,10 @@ window.reactiveField = {
   // the contacts section is the projects field with platform icons in it.
   // Each item is { id, title } plus either `src` (a photo to cut to a blob)
   // or `icon` (an SVG that already carries its own shape).
+  // Warm a set the field will want later — see warmFieldItems.
+  warmFieldItems(items) {
+    return warmFieldItems(items);
+  },
   async setFieldItems(items, mountId) {
     fieldMountId = mountId || "fieldMount";
     PROJECT_IMAGES.length = 0;
@@ -3004,6 +3208,11 @@ window.reactiveField = {
   postRevealDurationMs() {
     return POST_REVEAL_MS;
   },
+  // The two halves of a change of record, so the cover can be taken off and
+  // put back on exactly as fast as the sound falls and comes back.
+  swapDurationsMs() {
+    return { lift: SWAP_LIFT_MS, drop: SWAP_DROP_MS };
+  },
   // Hands over a whole new queue and starts it from the top — what a genre
   // or a vibe does when it's picked. Unlike playEntry this leaves the player
   // in charge of the list, so next and previous walk the selection.
@@ -3017,13 +3226,14 @@ window.reactiveField = {
     playlist = tracks;
     trackIndex = 0;
     externalTrack = null;
-    duckForSwap(tracks[0].src);
-    audioEl.src = tracks[0].src;
-    announceTrack();
     if (running) {
-      keepSpinning();
-      startAudio();
+      swapRecord(() => {
+        audioEl.src = tracks[0].src;
+        announceTrack();
+      });
     } else {
+      audioEl.src = tracks[0].src;
+      announceTrack();
       spinUp();
     }
   },
@@ -3092,16 +3302,15 @@ window.reactiveField = {
     // picking another track out of the list is a track change, not a start —
     // unless nothing was sounding, in which case it is one
     const running = transportOn;
-    duckForSwap(entry.src);
-    if (audioEl.src !== new URL(entry.src, location.href).href) {
-      audioEl.src = entry.src;
-    }
-    externalTrack = entry;
-    announceTrack();
+    const load = () => {
+      if (audioEl.src !== new URL(entry.src, location.href).href) audioEl.src = entry.src;
+      externalTrack = entry;
+      announceTrack();
+    };
     if (running) {
-      keepSpinning();
-      startAudio();
+      swapRecord(load);
     } else {
+      load();
       spinUp();
     }
   },

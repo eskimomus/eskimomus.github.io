@@ -261,8 +261,16 @@ html {
    later than the background and the canvas. Muted here, everything reads the
    token's current value directly and the whole page arrives together. The
    descendant combinator keeps :root itself — and so the token transition —
-   out of it. */
-:root.is-repainting * {
+   out of it.
+
+   Two things are held out of it, because they move rather than recolour and
+   both move at exactly the moment a palette change lands. The cover's lift and
+   drop is a transform and an opacity — a change of record recolours the page
+   and swaps the record on the same beat, and this rule was cancelling the
+   movement outright, so the cover snapped back instead of rising. The
+   now-playing block is the same story: it glides up or down as a name wraps to
+   another line, and that also happens exactly when the track changes. */
+:root.is-repainting *:not(.brand-art):not(.np-meta) {
   transition: none !important;
 }
 
@@ -396,6 +404,17 @@ html {
 .brand.is-playing .brand-art {
   opacity: 1;
   transform: scale(1);
+}
+
+/* Changing the record: the cover goes back down to exactly where it comes up
+   from — 0.42 is the logo badge's own size, so it withdraws behind the badge
+   rather than shrinking in mid-air — the artwork is swapped while it is out
+   of sight, and it rises again. The same movement the reveal makes, played
+   short; app.js sets the duration per half, since the lift and the drop are
+   deliberately not the same length. */
+.brand.is-playing.is-swapping .brand-art {
+  opacity: 0;
+  transform: scale(0.42);
 }
 
 /* The spinning half: the blob outline lives here rather than on .brand-art,
@@ -576,6 +595,13 @@ html {
 }
 
 .np-album {
+  color: var(--muted);
+}
+
+/* the download readout that follows the title while a track is still arriving
+   — the source line's tone, so it reads as an aside to the name rather than
+   part of it */
+.np-loading {
   color: var(--muted);
 }
 

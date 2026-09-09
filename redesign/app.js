@@ -1264,6 +1264,13 @@ function wireField() {
     "--post-reveal",
     `${window.reactiveField.postRevealDurationMs()}ms`,
   );
+
+  // The contacts icons were the one set still fetched and cut to shape on the
+  // way in, so opening contacts had them appear a beat late. Warmed here
+  // instead — six small SVGs, and the field they belong to is then instant.
+  // CONTACTS rather than FIELD_SETS: this runs long before that one is
+  // declared, and reaching for it aborted the rest of the file.
+  window.reactiveField.warmFieldItems(CONTACTS);
 }
 
 // --------------------------------------------------------------------------
@@ -1450,16 +1457,45 @@ function applyTrackPalette(entry) {
   setPalette(palette);
 }
 
+// past this either line takes a second one rather than running out under the
+// player's dots — see .np-track.is-wrapped
+function wrapLong(el, text) {
+  el.classList.toggle("is-wrapped", text.length > NP_ONE_LINE);
+}
+
+// The title, with how much of the track has arrived after it while it is still
+// arriving. The suffix counts toward the wrap: a title at the one-line limit
+// plus "(loading: 45%)" would otherwise run out from under the logo and across
+// the player's dots.
+let npTitle = "";
+let npLoadingPct = null;
+
+function renderTrackLine() {
+  npTrack.textContent = npTitle;
+  if (npLoadingPct !== null) {
+    const tag = document.createElement("span");
+    tag.className = "np-loading";
+    tag.textContent = ` (loading: ${npLoadingPct}%)`;
+    npTrack.appendChild(tag);
+  }
+  wrapLong(npTrack, npLoadingPct === null ? npTitle : `${npTitle} (loading: ${npLoadingPct}%)`);
+  centreNowPlaying();
+}
+
+// Called every frame; only touches the DOM when the whole number changes.
+function renderLoadProgress(fraction) {
+  const pct = fraction === null || fraction === undefined ? null : Math.round(fraction * 100);
+  if (pct === npLoadingPct) return;
+  npLoadingPct = pct;
+  renderTrackLine();
+}
+
 function renderNowPlaying(entry) {
   if (!entry) return;
   npArt.src = entry.art;
-  // past this either line takes a second one rather than running out under
-  // the player's dots — see .np-track.is-wrapped
-  const wrapLong = (el, text) => {
-    el.textContent = text;
-    el.classList.toggle("is-wrapped", text.length > NP_ONE_LINE);
-  };
-  wrapLong(npTrack, entry.track);
+  npTitle = entry.track;
+  renderTrackLine();
+  npAlbum.textContent = entry.album;
   wrapLong(npAlbum, entry.album);
   centreNowPlaying();
   cuedEntry = entry;
@@ -2087,6 +2123,13 @@ function playTag(ring) {
   if (!queue.length) return;
   tagQueueRing = ring;
   field.playPlaylist(queue);
+  // Handing over from one tag to another, the transport never changes state —
+  // it was playing before the press and it is playing after — so nothing
+  // announces it and renderPlayState, which is what normally moves the
+  // highlight, is never called. The old ring would go on burning and turning
+  // and the new one stay dark. Switching is the one case the press has to
+  // mark itself; starting and stopping still come back through the transport.
+  markActiveTag(ring);
 }
 
 // Genres asked for by name rather than left to the shuffle. `top` takes the
@@ -3032,6 +3075,32 @@ function renderTrackProgress(state) {
   }
 
   syncPlatter(state.rate);
+  renderRecordSwap(state.swapping);
+  renderLoadProgress(state.loadProgress);
+}
+
+// The cover comes off and goes back on with the sound. The timing is field.js's
+// — it is the same lift and drop the pitch makes — and read from it rather than
+// repeated here. The two halves get their own durations instead of one shared
+// transition: a record is taken off briskly and set down more gently, and
+// .brand-art's own 2s reveal is far too slow for either.
+let recordSwapping = false;
+
+// Asked for at the moment it is needed rather than cached at startup: this
+// runs long after boot, and reaching for it during wireField put it in front
+// of its own declaration.
+function swapDurations() {
+  const field = window.reactiveField;
+  return field && field.swapDurationsMs ? field.swapDurationsMs() : { lift: 300, drop: 450 };
+}
+
+function renderRecordSwap(swapping) {
+  if (!brand || swapping === recordSwapping) return;
+  recordSwapping = swapping;
+  const { lift, drop } = swapDurations();
+  const art = brand.querySelector(".brand-art");
+  if (art) art.style.transitionDuration = `${swapping ? lift : drop}ms`;
+  brand.classList.toggle("is-swapping", Boolean(swapping));
 }
 
 // The covers are the record, so they turn on the same curve the sound does:
