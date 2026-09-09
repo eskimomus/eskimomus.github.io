@@ -1455,16 +1455,27 @@ function rasterizeToCanvas(svgText, px) {
   });
 }
 
-// A fresh element every time rather than a new href on the old one. Chromium
-// re-reads a changed href; Safari has long been happy to leave the icon it
-// already has, and replacing the node is what it does notice.
+// The palette icon goes in a second link, appended after the static one the
+// page ships, and that static one is never touched.
+//
+// It used to replace every icon link with its own. Measured in Safari on the
+// live site, that left the tab with the wrong icon entirely: Safari resolves
+// the favicon after the page has loaded, by which time the only candidate was
+// a data: URL — which it will not take. It never requested assets/favicon.png
+// at all, fell back to /favicon.ico, and showed the tile it had cached for the
+// domain from before the site had an icon.
+//
+// Two links suits both: browsers that take a data: URL prefer the last
+// candidate declared and follow the palette, and Safari uses the real file at
+// the top of the head and simply ignores this one.
 function installFavicon(href) {
-  for (const old of document.querySelectorAll('link[rel="icon"]')) old.remove();
-  faviconLink = document.createElement("link");
-  faviconLink.rel = "icon";
-  faviconLink.type = "image/png";
+  if (!faviconLink || !faviconLink.isConnected) {
+    faviconLink = document.createElement("link");
+    faviconLink.rel = "icon";
+    faviconLink.type = "image/png";
+    document.head.appendChild(faviconLink);
+  }
   faviconLink.href = href;
-  document.head.appendChild(faviconLink);
 }
 
 function paintFavicon() {

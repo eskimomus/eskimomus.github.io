@@ -4,9 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>matt swan</title>
-    <!-- The logo in the default palette, so the tab has its icon from the
-         first byte. app.js replaces it with one drawn to whatever palette the
-         page is wearing, and keeps replacing it as that changes. -->
+    <!-- The logo in the default palette. This link stays exactly as it is for
+         the life of the page: Safari resolves the favicon after load and will
+         not take a data: URL, so it needs a real file to still be here. app.js
+         appends a second link below it, drawn to whatever palette the page is
+         wearing, which the browsers that do take one prefer. There is a
+         favicon.ico beside index.html too, for anything that goes looking
+         there instead of reading this. -->
     <link rel="icon" type="image/png" href="./assets/favicon.png?v=1" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -196,6 +200,6 @@
     <script src="./feed-data.js?v=22"></script>
     <script src="./music-data.js?v=25"></script>
     <script src="./field.js?v=66"></script>
-    <script src="./app.js?v=95"></script>
+    <script src="./app.js?v=96"></script>
   </body>
 </html>
