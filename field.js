@@ -20,6 +20,9 @@
 // during an async scroll, and drags fixed elements during an overscroll).
 const canvas = document.getElementById("stage");
 const fieldCtx = canvas.getContext("2d");
+// The page's own box — the field canvas is a sibling of it, so this is how
+// far the document actually reaches; see applyFieldBox.
+const pageEl = document.querySelector(".page");
 const playerCanvas = document.getElementById("stagePlayer");
 const playerCtx = playerCanvas ? playerCanvas.getContext("2d") : fieldCtx;
 // Whichever surface the draw helpers below are currently painting on.
@@ -42,7 +45,10 @@ let viewFadeMs = 260; // refreshed from --tab-fade when the view changes
 
 // How far the document is scrolled — everything is laid out in document space
 // and drawn through this offset (see loop()).
-let scrollOffset = 0;
+// The box the field's canvas covers, in document coordinates. The canvas is
+// positioned there rather than pinned to the viewport — see #stage in the
+// stylesheet and applyFieldBox below.
+const fieldBox = { left: 0, top: 0, width: 0, height: 0 };
 
 // Six slightly different outlines (the original plus five variants) so
 // circles don't all read as stamped from the exact same shape.
@@ -120,6 +126,12 @@ const DESIGN_TRACK_NUDGE_X = -5;
 // Field view isn't in the Figma frame yet; keeping the project circles at
 // twice the largest ambient dot until there's a frame to measure.
 const DESIGN_PROJECT_CIRCLE_R = DESIGN_CIRCLE_MAX_R * 2 * 1.25;
+// How far past its mount the field's canvas reaches. A circle can be dragged
+// up to 1.6 of its own radius from home and its far edge sits another radius
+// beyond that, and the cursor and collisions nudge the lattice a little
+// further, so this covers the most any of it can stray outside the box the
+// grid itself occupies.
+const DESIGN_FIELD_BLEED = 220;
 
 // The scaled values the rest of the file works in. applyScale() refreshes
 // them whenever the viewport changes.
@@ -128,6 +140,7 @@ let CELL_SPACING = DESIGN_CELL_SPACING;
 let CIRCLE_MAX_R = DESIGN_CIRCLE_MAX_R;
 let PLAYER_ASSET_SCALE = DESIGN_PLAYER_ASSET_SCALE;
 let PROJECT_CIRCLE_R = DESIGN_PROJECT_CIRCLE_R;
+let FIELD_BLEED = DESIGN_FIELD_BLEED;
 
 function applyScale() {
   // read rather than recomputed: app.js caps the scale on wide screens, and
@@ -136,6 +149,7 @@ function applyScale() {
     parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--scale")) || 1;
   CELL_SPACING = DESIGN_CELL_SPACING * designScale;
   CIRCLE_MAX_R = DESIGN_CIRCLE_MAX_R * designScale;
+  FIELD_BLEED = DESIGN_FIELD_BLEED * designScale;
   PLAYER_ASSET_SCALE = DESIGN_PLAYER_ASSET_SCALE * designScale;
   PROJECT_CIRCLE_R = DESIGN_PROJECT_CIRCLE_R * designScale;
 }
@@ -182,7 +196,6 @@ let pageLeft = 0; // document x of the page's left edge — 0 until the scale ca
 let height = 0; // canvas height — the viewport's, since the canvas is fixed to it
 let playerWidth = 0;
 let playerHeight = 0; // the player band's own box, in CSS px
-let maxScroll = 0; // refreshed in resize(), which every layout change runs through
 let viewportHeight = 0; // window.innerHeight — layout math (margins, how many rows fit) uses this too
 
 // Writing to canvas.width/height clears the bitmap — even when assigning the
@@ -198,10 +211,33 @@ function sizeSurface(el, context, w, h) {
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+// Put the canvas over the field's mount, with the bleed around it, and record
+// where that box sits in the document so drawField can offset into it.
+//
+// The bleed is free on three sides: the document does not scroll above its own
+// top, and the body clips horizontally. Below, it would be scrollable height
+// the page itself does not have — and the field is pinned to the bottom of the
+// page precisely so there is none — so the box stops where the page stops.
+function applyFieldBox(mount) {
+  const left = mount.left - FIELD_BLEED;
+  const top = mount.top - FIELD_BLEED;
+  const w = mount.width + FIELD_BLEED * 2;
+  const pageBottom = pageEl
+    ? pageEl.getBoundingClientRect().bottom + window.scrollY
+    : Number.POSITIVE_INFINITY;
+  const h = Math.max(mount.height, Math.min(top + mount.height + FIELD_BLEED * 2, pageBottom) - top);
+  fieldBox.left = left;
+  fieldBox.top = top;
+  fieldBox.width = w;
+  fieldBox.height = h;
+  canvas.style.left = left + "px";
+  canvas.style.top = top + "px";
+  canvas.style.width = w + "px";
+  canvas.style.height = h + "px";
+  sizeSurface(canvas, fieldCtx, w, h);
+}
+
 function applyCanvasSize() {
-  canvas.style.width = width + "px";
-  canvas.style.height = height + "px";
-  sizeSurface(canvas, fieldCtx, width, height);
 
   // the player's band takes its size from the stylesheet (110rem tall), so
   // it scales with everything else
@@ -217,8 +253,9 @@ function applyCanvasSize() {
   }
 }
 
-// The canvas covers the viewport and nothing more — the page itself provides
-// the scroll height, and everything is drawn through `scrollOffset`.
+// The player's canvas covers the width of the page; the field's covers its own
+// mount and is sized in applyFieldBox, which buildField calls once the mount's
+// final height is known.
 function resize() {
   width = window.innerWidth;
   viewportHeight = window.innerHeight;
@@ -227,7 +264,6 @@ function resize() {
   // densities, changes the answer — and sizeSurface only rewrites the backing
   // store when the numbers actually differ, so asking every time is free.
   dpr = pixelRatioForViewport();
-  maxScroll = Math.max(0, document.documentElement.scrollHeight - viewportHeight);
   applyCanvasSize();
 }
 resize();
@@ -1209,7 +1245,12 @@ function buildField() {
   const neededHeight = topRowRadius + (rows - 1) * cellSize + CIRCLE_MAX_R;
   if (Math.abs(mount.height - neededHeight) > 1) {
     mount.el.style.height = neededHeight + "px";
+    mount.height = neededHeight;
   }
+
+  // The canvas goes where the grid is about to be, at the height just settled
+  // on rather than the one CSS happened to give the box.
+  applyFieldBox(mount);
 
   // Same story as buildPlayer: a relayout is usually nothing to do with the
   // field (a project expanded, a scrollbar appeared), and rebuilding would
@@ -3368,12 +3409,6 @@ async function boot() {
 }
 
 function loop() {
-  // Clamped: an elastic overscroll reports an offset past either end, and
-  // following it moved the field away from the page it belongs to. maxScroll
-  // is cached — reading scrollHeight forces a layout, and this runs every
-  // frame while the page is being scrolled.
-  scrollOffset = Math.max(0, Math.min(window.scrollY, maxScroll));
-
   // follow the stylesheet's palette, including while it's mid-transition
   const paletteEvery = document.documentElement.classList.contains("is-repainting")
     ? PALETTE_POLL_FADING
@@ -3417,13 +3452,19 @@ function loop() {
   if (viewFade > 0) stepField(mouse);
   stepPlayer(mouse);
 
-  // The field: laid out in document coordinates on a viewport-pinned canvas,
-  // so the scroll offset is applied here once.
+  // The field: laid out in document coordinates, on a canvas that sits in the
+  // document over its own mount. The browser scrolls the surface, so all that
+  // is taken out here is where that box begins.
+  //
+  // It used to be pinned to the viewport with the scroll offset applied per
+  // frame, which is the same mistake the player was built on: the compositor
+  // moves the page, this thread learns the new scroll position a frame later,
+  // and the circles lag and spring against the text they belong beside.
   ctx = fieldCtx;
-  ctx.clearRect(0, 0, width, height);
+  ctx.clearRect(0, 0, fieldBox.width, fieldBox.height);
   if (viewFade > 0) {
     ctx.save();
-    ctx.translate(0, -scrollOffset);
+    ctx.translate(-fieldBox.left, -fieldBox.top);
     ctx.globalAlpha = viewFade;
     drawField();
     ctx.globalAlpha = 1;

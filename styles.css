@@ -418,11 +418,16 @@ html {
   pointer-events: none;
 }
 
+/* Placed in the document over the field's own mount, not pinned to the
+   viewport: the browser scrolls the surface itself. Pinned, the scroll offset
+   had to be applied to the drawing every frame, and since the compositor moves
+   the page before this thread hears about it, the circles lagged and sprang
+   against the page they belong to. field.js sets left/top/width/height — see
+   applyFieldBox. */
 #stage {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
+  position: absolute;
+  left: 0;
+  top: 0;
   /* the circles are decoration + their own hit-testing lives in field.js,
      which listens on the window — so the canvas itself must never eat a
      click meant for the page */
