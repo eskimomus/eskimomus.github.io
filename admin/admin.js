@@ -471,9 +471,9 @@ function linksEditor(owner, { max = Infinity, label = "links" } = {}) {
 
 function artEditor(owner, key, nameFor) {
   const src = owner[key];
-  // the admin serves the repo, so the site's own relative path resolves once
-  // it is rooted — ../assets/x from /redesign is /assets/x from here
-  const shown = src ? src.replace(/^\.\.\//, "/").replace(/^\.\//, "/redesign/") : null;
+  // the admin serves the repo, and the site sits at its root, so the site's
+  // own relative path is the served path once the leading dot is dropped
+  const shown = src ? src.replace(/^\.\//, "/") : null;
 
   const file = el("input", { type: "file", accept: "image/*", style: "display:none" });
   file.addEventListener("change", async () => {

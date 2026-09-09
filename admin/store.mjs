@@ -23,9 +23,9 @@ const KEEP_BACKUPS = 40;
 
 // which file holds what, and the order the site expects to find them in
 export const FILES = {
-  feed: { file: "redesign/feed-data.js", consts: ["FEED"] },
-  site: { file: "redesign/data.js", consts: ["PROJECTS", "CONTACTS"] },
-  music: { file: "redesign/music-data.js", consts: ["SOUNDTRACKS", "SIDE_PROJECTS"] },
+  feed: { file: "feed-data.js", consts: ["FEED"] },
+  site: { file: "data.js", consts: ["PROJECTS", "CONTACTS"] },
+  music: { file: "music-data.js", consts: ["SOUNDTRACKS", "SIDE_PROJECTS"] },
 };
 
 const CONST_FILE = new Map();
@@ -205,12 +205,12 @@ export async function writeAll(changes, expected = null) {
   return written;
 }
 
-// redesign/index.html loads each script with a ?v= on it. Editing a data file
+// index.html loads each script with a ?v= on it. Editing a data file
 // without moving that number leaves anyone who has the old one cached — a
 // returning visitor, a CDN edge — reading yesterday's content off a page that
 // has already shipped. So the number follows the file it belongs to.
 async function bumpCacheBuster(basename) {
-  const page = path.join(ROOT, "redesign/index.html");
+  const page = path.join(ROOT, "index.html");
   const html = await readFile(page, "utf8");
   const pattern = new RegExp(`(${basename.replace(/\./g, "\\.")}\\?v=)(\\d+)`);
   if (!pattern.test(html)) return;

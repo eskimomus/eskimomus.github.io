@@ -47,21 +47,21 @@ let scrollOffset = 0;
 // Six slightly different outlines (the original plus five variants) so
 // circles don't all read as stamped from the exact same shape.
 const BLOB_SVG_URLS = [
-  "../assets/circle-blob.svg",
-  "../assets/circle-blob-2.svg",
-  "../assets/circle-blob-3.svg",
-  "../assets/circle-blob-4.svg",
-  "../assets/circle-blob-5.svg",
-  "../assets/circle-blob-6.svg",
+  "./assets/circle-blob.svg",
+  "./assets/circle-blob-2.svg",
+  "./assets/circle-blob-3.svg",
+  "./assets/circle-blob-4.svg",
+  "./assets/circle-blob-5.svg",
+  "./assets/circle-blob-6.svg",
 ];
-const PLAY_ICON_URL = "../assets/icon-play.svg";
-const PAUSE_ICON_URL = "../assets/icon-pause.svg";
-const PREV_ICON_URL = "../assets/icon-prev.svg";
-const NEXT_ICON_URL = "../assets/icon-next.svg";
-const SHUFFLE_ICON_URL = "../assets/icon-shuffle.svg";
-const LOADING_ICON_URL = "../assets/icon-loading.svg";
-const PLAYER_TRACK_URL = "../assets/player-bar.svg";
-const PLAYER_THUMB_URL = "../assets/player-slider.svg";
+const PLAY_ICON_URL = "./assets/icon-play.svg";
+const PAUSE_ICON_URL = "./assets/icon-pause.svg";
+const PREV_ICON_URL = "./assets/icon-prev.svg";
+const NEXT_ICON_URL = "./assets/icon-next.svg";
+const SHUFFLE_ICON_URL = "./assets/icon-shuffle.svg";
+const LOADING_ICON_URL = "./assets/icon-loading.svg";
+const PLAYER_TRACK_URL = "./assets/player-bar.svg";
+const PLAYER_THUMB_URL = "./assets/player-slider.svg";
 const BLOB_RASTER_SIZE = 240; // px — largest circle we'll ever draw; smaller ones downscale from this
 const ICON_UPSCALE = 3; // rasterize icons a few times bigger than their native size for crispness
 // Kept size for the progress bar's mask. 2x its native width is 808px, just

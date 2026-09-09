@@ -89,7 +89,7 @@ const HALO_GRID = {
   maxChebyshev: 1,
 };
 
-const BLOB_COUNT = 6; // ../assets/circle-blob.svg + circle-blob-2..6.svg
+const BLOB_COUNT = 6; // ./assets/circle-blob.svg + circle-blob-2..6.svg
 
 // A shape is addressed by the stylesheet token that holds it, never by file
 // path — buildMasks() below swaps the tokens for high-resolution bitmaps.
@@ -129,19 +129,19 @@ function artShadowLayer(token) {
 // downscale (same circle, supersampled: 65 levels). Target widths are ~2-3x
 // the largest the shape is ever painted at, in device pixels.
 const MASK_SOURCES = [
-  ["--blob-1", "../assets/circle-blob.svg", 512],
-  ["--blob-2", "../assets/circle-blob-2.svg", 512],
-  ["--blob-3", "../assets/circle-blob-3.svg", 512],
-  ["--blob-4", "../assets/circle-blob-4.svg", 512],
-  ["--blob-5", "../assets/circle-blob-5.svg", 512],
-  ["--blob-6", "../assets/circle-blob-6.svg", 512],
-  ["--mask-bar", "../assets/track-bar.svg", 4803], // 3x its 1601 design width
-  ["--mask-play", "../assets/icon-play.svg", 198], // 3x, as the canvas does
-  ["--mask-stop", "../assets/icon-pause.svg", 201],
-  ["--mask-thumb", "../assets/player-slider.svg", 105],
-  ["--mask-view-list", "../assets/view-list.svg", 150],
-  ["--mask-view-field", "../assets/view-field.svg", 645],
-  ["--mask-view-smile", "../assets/view-smile.svg", 213], // 3x its 71 box
+  ["--blob-1", "./assets/circle-blob.svg", 512],
+  ["--blob-2", "./assets/circle-blob-2.svg", 512],
+  ["--blob-3", "./assets/circle-blob-3.svg", 512],
+  ["--blob-4", "./assets/circle-blob-4.svg", 512],
+  ["--blob-5", "./assets/circle-blob-5.svg", 512],
+  ["--blob-6", "./assets/circle-blob-6.svg", 512],
+  ["--mask-bar", "./assets/track-bar.svg", 4803], // 3x its 1601 design width
+  ["--mask-play", "./assets/icon-play.svg", 198], // 3x, as the canvas does
+  ["--mask-stop", "./assets/icon-pause.svg", 201],
+  ["--mask-thumb", "./assets/player-slider.svg", 105],
+  ["--mask-view-list", "./assets/view-list.svg", 150],
+  ["--mask-view-field", "./assets/view-field.svg", 645],
+  ["--mask-view-smile", "./assets/view-smile.svg", 213], // 3x its 71 box
 ];
 
 // the rasterised bitmaps, kept by token — bakeArtwork below needs the pixels,
@@ -1395,7 +1395,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(centreNowP
 // document and the page's palette (--bg / --gold) can drive its colors.
 async function mountLogo() {
   try {
-    const svg = await fetch("../assets/logo.svg").then((r) => r.text());
+    const svg = await fetch("./assets/logo.svg").then((r) => r.text());
     brandLogo.innerHTML = svg;
   } catch {
     // leaving the badge empty is better than blocking the rest of the page

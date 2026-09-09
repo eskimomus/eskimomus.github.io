@@ -7,7 +7,7 @@ npm run admin
 ```
 
 Then open **http://127.0.0.1:5174/admin/** — the site itself is at
-`/redesign/index.html` on the same port, so previews and audio load next to
+`/index.html` on the same port, so previews and audio load next to
 the editor.
 
 Publishing is still git:
@@ -22,9 +22,9 @@ GitHub Pages rebuilds within a minute or so.
 
 | tab | file | what |
 | --- | --- | --- |
-| feed | `redesign/feed-data.js` | posts: title, date, body, artwork, up to two links |
-| projects | `redesign/data.js` | the write-ups: title, outline, artwork, paragraphs, links |
-| all music | `redesign/music-data.js` | soundtracks and side projects: tags, palette, categories, tracks |
+| feed | `feed-data.js` | posts: title, date, body, artwork, up to two links |
+| projects | `data.js` | the write-ups: title, outline, artwork, paragraphs, links |
+| all music | `music-data.js` | soundtracks and side projects: tags, palette, categories, tracks |
 
 Each track also carries `genres`, `vibes` and `bpm`. All three are optional
 and only written when set — an empty box removes the key rather than storing a
@@ -37,12 +37,12 @@ Anything typed by hand that isn't in a list is still offered afterwards, so a
 one-off word doesn't disappear on the next track.
 
 Uploads land where the site already keeps things — `assets/audio/<project id>/`
-for mp3s, `redesign/previews/` for artwork — under names slugged the same way
+for mp3s, `previews/` for artwork — under names slugged the same way
 every existing file is (`törv pt. 2` → `torv-pt-2.mp3`). Several mp3s can go up
 at once; they are added in file-name order, and each track's length is measured
 from the file itself with `afinfo`.
 
-Saving also bumps the `?v=` on the file it wrote in `redesign/index.html`, so a
+Saving also bumps the `?v=` on the file it wrote in `index.html`, so a
 returning visitor doesn't get yesterday's content out of a cache.
 
 ## Things worth knowing

@@ -1,6 +1,6 @@
 // ============================================================================
-// Content for the projects tab. Copy carried over verbatim from the live
-// site's index.html so the redesign stays in sync with what's published.
+// Content for the projects tab. Copy carried over verbatim from the site
+// this one replaced, so nothing published was lost in the rebuild.
 //
 // `mask` picks one of the six blob outlines in /assets, so every circle's
 // wobble reads a little differently — the same trick the canvas field plays.
@@ -133,37 +133,37 @@ const CONTACTS = [
   {
     "id": "mail",
     "title": "email",
-    "icon": "../assets/contacts/mail.svg",
+    "icon": "./assets/contacts/mail.svg",
     "href": "mailto:matt_swan@tuta.io"
   },
   {
     "id": "youtube",
     "title": "youtube",
-    "icon": "../assets/contacts/yt.svg",
+    "icon": "./assets/contacts/yt.svg",
     "href": "https://www.youtube.com/@matthew_swan"
   },
   {
     "id": "telegram",
     "title": "telegram",
-    "icon": "../assets/contacts/telegram.svg",
+    "icon": "./assets/contacts/telegram.svg",
     "href": "https://t.me/matt_swan_music"
   },
   {
     "id": "instagram",
     "title": "instagram",
-    "icon": "../assets/contacts/insta.svg",
+    "icon": "./assets/contacts/insta.svg",
     "href": "https://www.instagram.com/matt_swaan/"
   },
   {
     "id": "x",
     "title": "x",
-    "icon": "../assets/contacts/x.svg",
+    "icon": "./assets/contacts/x.svg",
     "href": "https://x.com/matt_swaan"
   },
   {
     "id": "discord",
     "title": "discord",
-    "icon": "../assets/contacts/discord.svg",
+    "icon": "./assets/contacts/discord.svg",
     "href": null
   }
 ];

@@ -53,7 +53,7 @@ const SOUNDTRACKS = [
           {
             "title": "ammonia",
             "detail": "research institute floor music, trailer music",
-            "src": "../assets/audio/kletka/ammonia.mp3",
+            "src": "./assets/audio/kletka/ammonia.mp3",
             "duration": 182.439175,
             "bpm": 76,
             "genres": [
@@ -71,7 +71,7 @@ const SOUNDTRACKS = [
           {
             "title": "strelka",
             "detail": "antigravity floor music",
-            "src": "../assets/audio/kletka/strelka.mp3",
+            "src": "./assets/audio/kletka/strelka.mp3",
             "duration": 210.0506,
             "bpm": 112,
             "vibes": [
@@ -88,7 +88,7 @@ const SOUNDTRACKS = [
           {
             "title": "afalina",
             "detail": "flood floor music",
-            "src": "../assets/audio/kletka/afalina.mp3",
+            "src": "./assets/audio/kletka/afalina.mp3",
             "duration": 104.0457,
             "bpm": 121,
             "genres": [
@@ -104,7 +104,7 @@ const SOUNDTRACKS = [
           {
             "title": "kondensat",
             "detail": "mist floor music",
-            "src": "../assets/audio/kletka/kondensat.mp3",
+            "src": "./assets/audio/kletka/kondensat.mp3",
             "duration": 80.039175,
             "bpm": 156,
             "genres": [
@@ -120,7 +120,7 @@ const SOUNDTRACKS = [
           {
             "title": "radiotrophika iii",
             "detail": "greenhouse floor music",
-            "src": "../assets/audio/kletka/radiotrophika-iii.mp3",
+            "src": "./assets/audio/kletka/radiotrophika-iii.mp3",
             "duration": 128.0261,
             "bpm": 150,
             "genres": [
@@ -138,7 +138,7 @@ const SOUNDTRACKS = [
           {
             "title": "anguta",
             "detail": "schisophasia floor music",
-            "src": "../assets/audio/kletka/anguta.mp3",
+            "src": "./assets/audio/kletka/anguta.mp3",
             "duration": 138.031,
             "bpm": 119,
             "genres": [
@@ -151,7 +151,7 @@ const SOUNDTRACKS = [
           {
             "title": "assembly error #7 ambience",
             "detail": "giant robo-fly boss floor",
-            "src": "../assets/audio/kletka/assembly-error-7-ambience.mp3",
+            "src": "./assets/audio/kletka/assembly-error-7-ambience.mp3",
             "duration": 106.7102,
             "bpm": 90,
             "genres": [
@@ -172,7 +172,7 @@ const SOUNDTRACKS = [
           {
             "title": "assembly error #7 phase 1",
             "detail": "giant robo-fly boss",
-            "src": "../assets/audio/kletka/bossfight/assembly-error-7-phase-1.mp3",
+            "src": "./assets/audio/kletka/bossfight/assembly-error-7-phase-1.mp3",
             "duration": 74.7102,
             "bpm": 90,
             "genres": [
@@ -189,7 +189,7 @@ const SOUNDTRACKS = [
           {
             "title": "assembly error #7 phase 2",
             "detail": "giant robo-fly boss, trailer music",
-            "src": "../assets/audio/kletka/bossfight/assembly-error-7-phase-2.mp3",
+            "src": "./assets/audio/kletka/bossfight/assembly-error-7-phase-2.mp3",
             "duration": 91.1151,
             "bpm": 94,
             "vibes": [
@@ -207,7 +207,7 @@ const SOUNDTRACKS = [
           {
             "title": "i got the pollen",
             "detail": "giant bee",
-            "src": "../assets/audio/kletka/bossfight/i-got-the-pollen.mp3",
+            "src": "./assets/audio/kletka/bossfight/i-got-the-pollen.mp3",
             "duration": 73.874275,
             "bpm": 130,
             "genres": [
@@ -224,7 +224,7 @@ const SOUNDTRACKS = [
           {
             "title": "kashpirovsky’s room",
             "detail": "",
-            "src": "../assets/audio/kletka/bossfight/kashpirovskys-room.mp3",
+            "src": "./assets/audio/kletka/bossfight/kashpirovskys-room.mp3",
             "duration": 67.78775,
             "bpm": 85,
             "genres": [
@@ -246,7 +246,7 @@ const SOUNDTRACKS = [
           {
             "title": "kletka official launch trailer music",
             "detail": "i hate this track",
-            "src": "../assets/audio/kletka/trailer/kletka-official-launch-trailer-music.mp3",
+            "src": "./assets/audio/kletka/trailer/kletka-official-launch-trailer-music.mp3",
             "duration": 84.0359,
             "bpm": 100,
             "pick": 0
@@ -303,7 +303,7 @@ const SOUNDTRACKS = [
           {
             "title": "a completely real main theme",
             "detail": "main menu and trailer theme",
-            "src": "../assets/audio/fictional-story/ingame/a-completely-real-main-theme.mp3",
+            "src": "./assets/audio/fictional-story/ingame/a-completely-real-main-theme.mp3",
             "duration": 147.408975,
             "bpm": 80,
             "genres": [
@@ -319,7 +319,7 @@ const SOUNDTRACKS = [
           {
             "title": "junktown theme",
             "detail": "",
-            "src": "../assets/audio/fictional-story/ingame/junktown-theme.mp3",
+            "src": "./assets/audio/fictional-story/ingame/junktown-theme.mp3",
             "duration": 159.5559,
             "bpm": 82,
             "vibes": [
@@ -336,7 +336,7 @@ const SOUNDTRACKS = [
           {
             "title": "the first day inside a whale",
             "detail": "lobby theme",
-            "src": "../assets/audio/fictional-story/ingame/the-first-day-inside-a-whale.mp3",
+            "src": "./assets/audio/fictional-story/ingame/the-first-day-inside-a-whale.mp3",
             "duration": 116.166525,
             "bpm": 82,
             "genres": [
@@ -352,7 +352,7 @@ const SOUNDTRACKS = [
           {
             "title": "casino theme",
             "detail": "",
-            "src": "../assets/audio/fictional-story/ingame/casino-theme.mp3",
+            "src": "./assets/audio/fictional-story/ingame/casino-theme.mp3",
             "duration": 28.47345,
             "bpm": 135,
             "genres": [
@@ -366,7 +366,7 @@ const SOUNDTRACKS = [
           {
             "title": "arcade theme",
             "detail": "",
-            "src": "../assets/audio/fictional-story/ingame/arcade-theme.mp3",
+            "src": "./assets/audio/fictional-story/ingame/arcade-theme.mp3",
             "duration": 24.03265,
             "bpm": 70,
             "vibes": [
@@ -380,7 +380,7 @@ const SOUNDTRACKS = [
           {
             "title": "secret indev location theme",
             "detail": "",
-            "src": "../assets/audio/fictional-story/ingame/secret-indev-location-theme.mp3",
+            "src": "./assets/audio/fictional-story/ingame/secret-indev-location-theme.mp3",
             "duration": 24.03265,
             "bpm": 80
           }
@@ -420,7 +420,7 @@ const SOUNDTRACKS = [
           {
             "title": "schroeder chase theme",
             "detail": "",
-            "src": "../assets/audio/downsouth/ingame/schroeder-chase-theme.mp3",
+            "src": "./assets/audio/downsouth/ingame/schroeder-chase-theme.mp3",
             "duration": 124.6302,
             "bpm": 135,
             "genres": [
@@ -435,7 +435,7 @@ const SOUNDTRACKS = [
           {
             "title": "platamun",
             "detail": "greenhouse area music",
-            "src": "../assets/audio/downsouth/ingame/platamun.mp3",
+            "src": "./assets/audio/downsouth/ingame/platamun.mp3",
             "duration": 268.27755,
             "bpm": 102,
             "genres": [
@@ -453,7 +453,7 @@ const SOUNDTRACKS = [
           {
             "title": "skadar",
             "detail": "motel area music",
-            "src": "../assets/audio/downsouth/ingame/skadar.mp3",
+            "src": "./assets/audio/downsouth/ingame/skadar.mp3",
             "duration": 136.0457,
             "bpm": 119,
             "genres": [
@@ -470,7 +470,7 @@ const SOUNDTRACKS = [
           {
             "title": "schroeder’s theme",
             "detail": "",
-            "src": "../assets/audio/downsouth/ingame/schroeders-theme.mp3",
+            "src": "./assets/audio/downsouth/ingame/schroeders-theme.mp3",
             "duration": 115.6702,
             "bpm": 110,
             "genres": [
@@ -484,7 +484,7 @@ const SOUNDTRACKS = [
           {
             "title": "juice!",
             "detail": "",
-            "src": "../assets/audio/downsouth/ingame/juice.mp3",
+            "src": "./assets/audio/downsouth/ingame/juice.mp3",
             "duration": 117.36815,
             "bpm": 90,
             "genres": [
@@ -500,7 +500,7 @@ const SOUNDTRACKS = [
           {
             "title": "demo ambience i",
             "detail": "",
-            "src": "../assets/audio/downsouth/ingame/demo-ambience-i.mp3",
+            "src": "./assets/audio/downsouth/ingame/demo-ambience-i.mp3",
             "duration": 156.029375,
             "bpm": 81,
             "genres": [
@@ -516,7 +516,7 @@ const SOUNDTRACKS = [
           {
             "title": "demo ambience ii",
             "detail": "",
-            "src": "../assets/audio/downsouth/ingame/demo-ambience-ii.mp3",
+            "src": "./assets/audio/downsouth/ingame/demo-ambience-ii.mp3",
             "duration": 192.0261,
             "bpm": 90,
             "vibes": [
@@ -532,7 +532,7 @@ const SOUNDTRACKS = [
           {
             "title": "schroeder's motel theme",
             "detail": "",
-            "src": "../assets/audio/downsouth/ingame/schroeders-motel-theme.mp3",
+            "src": "./assets/audio/downsouth/ingame/schroeders-motel-theme.mp3",
             "duration": 53.36815,
             "bpm": 90,
             "genres": [
@@ -546,7 +546,7 @@ const SOUNDTRACKS = [
           {
             "title": "violet nocturne",
             "detail": "",
-            "src": "../assets/audio/downsouth/ingame/violet-nocturne.mp3",
+            "src": "./assets/audio/downsouth/ingame/violet-nocturne.mp3",
             "duration": 134.791825,
             "bpm": 118,
             "genres": [
@@ -561,7 +561,7 @@ const SOUNDTRACKS = [
           {
             "title": "rattle snakes & the golfer",
             "detail": "",
-            "src": "../assets/audio/downsouth/ingame/rattle-snakes-and-the-golfer.mp3",
+            "src": "./assets/audio/downsouth/ingame/rattle-snakes-and-the-golfer.mp3",
             "duration": 123.036725,
             "bpm": 80,
             "genres": [
@@ -596,7 +596,7 @@ const SOUNDTRACKS = [
           {
             "title": "luka",
             "detail": "",
-            "src": "../assets/audio/cute-cat-island-game/ingame/luka.mp3",
+            "src": "./assets/audio/cute-cat-island-game/ingame/luka.mp3",
             "duration": 166.191,
             "bpm": 130,
             "genres": [
@@ -613,7 +613,7 @@ const SOUNDTRACKS = [
           {
             "title": "orchestral sketch #1",
             "detail": "",
-            "src": "../assets/audio/cute-cat-island-game/ingame/orchestral-sketch-1.mp3",
+            "src": "./assets/audio/cute-cat-island-game/ingame/orchestral-sketch-1.mp3",
             "duration": 68.414675,
             "genres": [
               "orchestral"
@@ -642,7 +642,7 @@ const SOUNDTRACKS = [
           {
             "title": "misty pier",
             "detail": "",
-            "src": "../assets/audio/seeds-of-sorrow/ingame/misty-pier.mp3",
+            "src": "./assets/audio/seeds-of-sorrow/ingame/misty-pier.mp3",
             "duration": 80.04,
             "bpm": 82,
             "genres": [
@@ -661,7 +661,7 @@ const SOUNDTRACKS = [
           {
             "title": "the rainy gnome song",
             "detail": "",
-            "src": "../assets/audio/seeds-of-sorrow/ingame/the-rainy-gnome-song.mp3",
+            "src": "./assets/audio/seeds-of-sorrow/ingame/the-rainy-gnome-song.mp3",
             "duration": 96.024,
             "bpm": 75,
             "genres": [
@@ -674,7 +674,7 @@ const SOUNDTRACKS = [
           {
             "title": "demo fight track",
             "detail": "",
-            "src": "../assets/audio/seeds-of-sorrow/ingame/demo-fight-track.mp3",
+            "src": "./assets/audio/seeds-of-sorrow/ingame/demo-fight-track.mp3",
             "duration": 134.426094,
             "bpm": 125,
             "genres": [
@@ -708,42 +708,42 @@ const SOUNDTRACKS = [
           {
             "title": "playing jazz in the metropolis",
             "detail": "",
-            "src": "../assets/audio/industrial-ambient/ingame/playing-jazz-in-the-metropolis.mp3",
+            "src": "./assets/audio/industrial-ambient/ingame/playing-jazz-in-the-metropolis.mp3",
             "duration": 174.024,
             "bpm": 83
           },
           {
             "title": "capital’s barbershop",
             "detail": "",
-            "src": "../assets/audio/industrial-ambient/ingame/capitals-barbershop.mp3",
+            "src": "./assets/audio/industrial-ambient/ingame/capitals-barbershop.mp3",
             "duration": 85.368,
             "bpm": 61
           },
           {
             "title": "bion",
             "detail": "",
-            "src": "../assets/audio/industrial-ambient/ingame/bion.mp3",
+            "src": "./assets/audio/industrial-ambient/ingame/bion.mp3",
             "duration": 96.024,
             "bpm": 85
           },
           {
             "title": "greenhouse floor 264",
             "detail": "",
-            "src": "../assets/audio/industrial-ambient/ingame/greenhouse-floor-264.mp3",
+            "src": "./assets/audio/industrial-ambient/ingame/greenhouse-floor-264.mp3",
             "duration": 112.032,
             "bpm": 120
           },
           {
             "title": "city lights",
             "detail": "",
-            "src": "../assets/audio/industrial-ambient/ingame/city-lights.mp3",
+            "src": "./assets/audio/industrial-ambient/ingame/city-lights.mp3",
             "duration": 130.944,
             "bpm": 75
           },
           {
             "title": "industrial ash",
             "detail": "",
-            "src": "../assets/audio/industrial-ambient/ingame/industrial-ash.mp3",
+            "src": "./assets/audio/industrial-ambient/ingame/industrial-ash.mp3",
             "duration": 124.704,
             "bpm": 77,
             "pick": 3
@@ -770,7 +770,7 @@ const SOUNDTRACKS = [
           {
             "title": "damaged data",
             "detail": "",
-            "src": "../assets/audio/untitled-ost/ingame/damaged-data.mp3",
+            "src": "./assets/audio/untitled-ost/ingame/damaged-data.mp3",
             "duration": 110.544,
             "bpm": 120,
             "genres": [
@@ -787,7 +787,7 @@ const SOUNDTRACKS = [
           {
             "title": "antenna",
             "detail": "",
-            "src": "../assets/audio/untitled-ost/ingame/antenna.mp3",
+            "src": "./assets/audio/untitled-ost/ingame/antenna.mp3",
             "duration": 112.968,
             "bpm": 144,
             "genres": [
@@ -802,7 +802,7 @@ const SOUNDTRACKS = [
           {
             "title": "a kite with dad",
             "detail": "",
-            "src": "../assets/audio/untitled-ost/ingame/a-kite-with-dad.mp3",
+            "src": "./assets/audio/untitled-ost/ingame/a-kite-with-dad.mp3",
             "duration": 134.232,
             "bpm": 123,
             "genres": [
@@ -818,7 +818,7 @@ const SOUNDTRACKS = [
           {
             "title": "a hopeful transmission",
             "detail": "",
-            "src": "../assets/audio/untitled-ost/ingame/a-hopeful-transmission.mp3",
+            "src": "./assets/audio/untitled-ost/ingame/a-hopeful-transmission.mp3",
             "duration": 112.032,
             "bpm": 82,
             "genres": [
@@ -833,7 +833,7 @@ const SOUNDTRACKS = [
           {
             "title": "fever dream",
             "detail": "",
-            "src": "../assets/audio/untitled-ost/ingame/fever-dream.mp3",
+            "src": "./assets/audio/untitled-ost/ingame/fever-dream.mp3",
             "duration": 184.536,
             "bpm": 147,
             "genres": [
@@ -848,7 +848,7 @@ const SOUNDTRACKS = [
           {
             "title": "infinity sign",
             "detail": "",
-            "src": "../assets/audio/untitled-ost/ingame/infinity-sign.mp3",
+            "src": "./assets/audio/untitled-ost/ingame/infinity-sign.mp3",
             "duration": 146.28,
             "bpm": 144,
             "genres": [
@@ -863,7 +863,7 @@ const SOUNDTRACKS = [
           {
             "title": "a burned pixel",
             "detail": "",
-            "src": "../assets/audio/untitled-ost/ingame/a-burned-pixel.mp3",
+            "src": "./assets/audio/untitled-ost/ingame/a-burned-pixel.mp3",
             "duration": 256.032,
             "bpm": 121,
             "genres": [
@@ -905,7 +905,7 @@ const SIDE_PROJECTS = [
           {
             "title": "fireflies",
             "detail": "",
-            "src": "../assets/audio/kylskap/fireflies.mp3",
+            "src": "./assets/audio/kylskap/fireflies.mp3",
             "duration": 67.9445,
             "bpm": 97,
             "genres": [
@@ -920,7 +920,7 @@ const SIDE_PROJECTS = [
           {
             "title": "dusT",
             "detail": "",
-            "src": "../assets/audio/kylskap/dust.mp3",
+            "src": "./assets/audio/kylskap/dust.mp3",
             "duration": 171.102,
             "bpm": 70,
             "genres": [
@@ -934,7 +934,7 @@ const SIDE_PROJECTS = [
           {
             "title": "talking boxes",
             "detail": "",
-            "src": "../assets/audio/kylskap/talking-boxes.mp3",
+            "src": "./assets/audio/kylskap/talking-boxes.mp3",
             "duration": 285.388,
             "bpm": 128,
             "vibes": [
@@ -949,7 +949,7 @@ const SIDE_PROJECTS = [
           {
             "title": "Montenegro",
             "detail": "",
-            "src": "../assets/audio/kylskap/montenegro.mp3",
+            "src": "./assets/audio/kylskap/montenegro.mp3",
             "duration": 112.013,
             "bpm": 123,
             "genres": [
@@ -965,7 +965,7 @@ const SIDE_PROJECTS = [
           {
             "title": "vivace",
             "detail": "",
-            "src": "../assets/audio/kylskap/vivace.mp3",
+            "src": "./assets/audio/kylskap/vivace.mp3",
             "duration": 203.233,
             "bpm": 90,
             "genres": [
@@ -981,7 +981,7 @@ const SIDE_PROJECTS = [
           {
             "title": "bubble butterfly",
             "detail": "",
-            "src": "../assets/audio/kylskap/bubble-butterfly.mp3",
+            "src": "./assets/audio/kylskap/bubble-butterfly.mp3",
             "duration": 174.602,
             "bpm": 90,
             "genres": [
@@ -998,7 +998,7 @@ const SIDE_PROJECTS = [
           {
             "title": "rutnät",
             "detail": "",
-            "src": "../assets/audio/kylskap/rutnat.mp3",
+            "src": "./assets/audio/kylskap/rutnat.mp3",
             "duration": 214.282,
             "bpm": 118,
             "genres": [
@@ -1012,7 +1012,7 @@ const SIDE_PROJECTS = [
           {
             "title": "mothes",
             "detail": "",
-            "src": "../assets/audio/kylskap/mothes.mp3",
+            "src": "./assets/audio/kylskap/mothes.mp3",
             "duration": 78.1845,
             "bpm": 90,
             "genres": [
@@ -1028,7 +1028,7 @@ const SIDE_PROJECTS = [
           {
             "title": "dreamer",
             "detail": "",
-            "src": "../assets/audio/kylskap/dreamer.mp3",
+            "src": "./assets/audio/kylskap/dreamer.mp3",
             "duration": 216.66,
             "bpm": 80,
             "genres": [
@@ -1043,7 +1043,7 @@ const SIDE_PROJECTS = [
           {
             "title": "armless",
             "detail": "",
-            "src": "../assets/audio/kylskap/armless.mp3",
+            "src": "./assets/audio/kylskap/armless.mp3",
             "duration": 121.835,
             "bpm": 90,
             "genres": [
@@ -1059,7 +1059,7 @@ const SIDE_PROJECTS = [
           {
             "title": "törv pt. 1",
             "detail": "",
-            "src": "../assets/audio/kylskap/torv-pt-1.mp3",
+            "src": "./assets/audio/kylskap/torv-pt-1.mp3",
             "duration": 96.1306,
             "bpm": 93,
             "genres": [
@@ -1074,7 +1074,7 @@ const SIDE_PROJECTS = [
           {
             "title": "törv pt. 2",
             "detail": "",
-            "src": "../assets/audio/kylskap/torv-pt-2.mp3",
+            "src": "./assets/audio/kylskap/torv-pt-2.mp3",
             "duration": 173.923,
             "bpm": 135,
             "genres": [
@@ -1107,7 +1107,7 @@ const SIDE_PROJECTS = [
           {
             "title": "plicexx204821982",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/plicexx204821982.mp3",
+            "src": "./assets/audio/plumborx2008/plicexx204821982.mp3",
             "duration": 98.6384,
             "bpm": 70,
             "genres": [
@@ -1122,7 +1122,7 @@ const SIDE_PROJECTS = [
           {
             "title": "blodox",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/blodox.mp3",
+            "src": "./assets/audio/plumborx2008/blodox.mp3",
             "duration": 74.4228,
             "bpm": 120,
             "genres": [
@@ -1138,7 +1138,7 @@ const SIDE_PROJECTS = [
           {
             "title": "amortona",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/amortona.mp3",
+            "src": "./assets/audio/plumborx2008/amortona.mp3",
             "duration": 160.131,
             "bpm": 120,
             "genres": [
@@ -1154,7 +1154,7 @@ const SIDE_PROJECTS = [
           {
             "title": "funi trak :D",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/funi-trak-d.mp3",
+            "src": "./assets/audio/plumborx2008/funi-trak-d.mp3",
             "duration": 121.104,
             "bpm": 80,
             "genres": [
@@ -1173,7 +1173,7 @@ const SIDE_PROJECTS = [
           {
             "title": "earaper",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/earaper.mp3",
+            "src": "./assets/audio/plumborx2008/earaper.mp3",
             "duration": 99.9967,
             "bpm": 120,
             "genres": [
@@ -1191,14 +1191,14 @@ const SIDE_PROJECTS = [
           {
             "title": "xxverter",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/xxverter.mp3",
+            "src": "./assets/audio/plumborx2008/xxverter.mp3",
             "duration": 10.449,
             "bpm": 107
           },
           {
             "title": "radiotrophika i",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/radiotrophika-i.mp3",
+            "src": "./assets/audio/plumborx2008/radiotrophika-i.mp3",
             "duration": 143.438,
             "bpm": 142,
             "genres": [
@@ -1214,7 +1214,7 @@ const SIDE_PROJECTS = [
           {
             "title": "exxtoria",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/exxtoria.mp3",
+            "src": "./assets/audio/plumborx2008/exxtoria.mp3",
             "duration": 118.7,
             "bpm": 130,
             "genres": [
@@ -1231,7 +1231,7 @@ const SIDE_PROJECTS = [
           {
             "title": "flixxer",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/flixxer.mp3",
+            "src": "./assets/audio/plumborx2008/flixxer.mp3",
             "duration": 96.0784,
             "bpm": 120,
             "genres": [
@@ -1247,7 +1247,7 @@ const SIDE_PROJECTS = [
           {
             "title": "kinetica",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/kinetica.mp3",
+            "src": "./assets/audio/plumborx2008/kinetica.mp3",
             "duration": 32.0522,
             "bpm": 120,
             "genres": [
@@ -1263,7 +1263,7 @@ const SIDE_PROJECTS = [
           {
             "title": "interatoria 8000",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/interatoria-8000.mp3",
+            "src": "./assets/audio/plumborx2008/interatoria-8000.mp3",
             "duration": 76.8,
             "bpm": 100,
             "vibes": [
@@ -1280,7 +1280,7 @@ const SIDE_PROJECTS = [
           {
             "title": "plicexx is your friend!!!",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/plicexx-is-your-friend.mp3",
+            "src": "./assets/audio/plumborx2008/plicexx-is-your-friend.mp3",
             "duration": 52.5845,
             "bpm": 80,
             "genres": [
@@ -1297,7 +1297,7 @@ const SIDE_PROJECTS = [
           {
             "title": "ambulator",
             "detail": "",
-            "src": "../assets/audio/plumborx2008/ambulator.mp3",
+            "src": "./assets/audio/plumborx2008/ambulator.mp3",
             "duration": 64.0261,
             "bpm": 120,
             "genres": [
@@ -1334,7 +1334,7 @@ const SIDE_PROJECTS = [
           {
             "title": "a school of fish",
             "detail": "",
-            "src": "../assets/audio/a-school-of-fish/a-school-of-fish.mp3",
+            "src": "./assets/audio/a-school-of-fish/a-school-of-fish.mp3",
             "duration": 230.424,
             "bpm": 100,
             "genres": [
@@ -1361,7 +1361,7 @@ const SIDE_PROJECTS = [
     "title": "luchin/060326",
     "album": "luchin/060326",
     "tags": "idk what is this genre",
-    "image": "../assets/luchin.webp",
+    "image": "./assets/luchin.webp",
     "categories": [
       {
         "id": "tracks",
@@ -1370,7 +1370,7 @@ const SIDE_PROJECTS = [
           {
             "title": "luchin",
             "detail": "",
-            "src": "../assets/audio/luchin-060326/luchin.mp3",
+            "src": "./assets/audio/luchin-060326/luchin.mp3",
             "duration": 166.44,
             "bpm": 75,
             "genres": [
@@ -1386,7 +1386,7 @@ const SIDE_PROJECTS = [
           {
             "title": "060326 untitled",
             "detail": "",
-            "src": "../assets/audio/luchin-060326/060326-untitled.mp3",
+            "src": "./assets/audio/luchin-060326/060326-untitled.mp3",
             "duration": 222.024,
             "bpm": 60,
             "vibes": [
@@ -1428,7 +1428,7 @@ const SIDE_PROJECTS = [
           {
             "title": "drunk bees",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/drunk-bees.mp3",
+            "src": "./assets/audio/wabi-sabi/drunk-bees.mp3",
             "duration": 152.496,
             "bpm": 82,
             "genres": [
@@ -1445,7 +1445,7 @@ const SIDE_PROJECTS = [
           {
             "title": "lost seals",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/lost-seals.mp3",
+            "src": "./assets/audio/wabi-sabi/lost-seals.mp3",
             "duration": 118.8,
             "bpm": 120,
             "vibes": [
@@ -1464,7 +1464,7 @@ const SIDE_PROJECTS = [
           {
             "title": "luba and i went to park and talked to birds with a whistle",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/luba-and-i-went-to-park-and-talked-to-birds-with-a-whistle.mp3",
+            "src": "./assets/audio/wabi-sabi/luba-and-i-went-to-park-and-talked-to-birds-with-a-whistle.mp3",
             "duration": 102.024,
             "bpm": 100,
             "genres": [
@@ -1479,7 +1479,7 @@ const SIDE_PROJECTS = [
           {
             "title": "wabi sabi",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/wabi-sabi.mp3",
+            "src": "./assets/audio/wabi-sabi/wabi-sabi.mp3",
             "duration": 69.696,
             "bpm": 68,
             "genres": [
@@ -1497,7 +1497,7 @@ const SIDE_PROJECTS = [
           {
             "title": "calm down",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/calm-down.mp3",
+            "src": "./assets/audio/wabi-sabi/calm-down.mp3",
             "duration": 106.296,
             "bpm": 140,
             "genres": [
@@ -1513,7 +1513,7 @@ const SIDE_PROJECTS = [
           {
             "title": "emerald, pink & profiterole memories",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/emerald-pink-and-profiterole-memories.mp3",
+            "src": "./assets/audio/wabi-sabi/emerald-pink-and-profiterole-memories.mp3",
             "duration": 150.864,
             "bpm": 121,
             "genres": [
@@ -1531,7 +1531,7 @@ const SIDE_PROJECTS = [
           {
             "title": "guitarist boy",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/guitarist-boy.mp3",
+            "src": "./assets/audio/wabi-sabi/guitarist-boy.mp3",
             "duration": 137.208,
             "bpm": 100,
             "genres": [
@@ -1548,7 +1548,7 @@ const SIDE_PROJECTS = [
           {
             "title": "tone change",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/tone-change.mp3",
+            "src": "./assets/audio/wabi-sabi/tone-change.mp3",
             "duration": 85.632,
             "bpm": 95,
             "genres": [
@@ -1563,7 +1563,7 @@ const SIDE_PROJECTS = [
           {
             "title": "república de mily pesik",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/republica-de-mily-pesik.mp3",
+            "src": "./assets/audio/wabi-sabi/republica-de-mily-pesik.mp3",
             "duration": 110.208,
             "bpm": 120,
             "genres": [
@@ -1581,7 +1581,7 @@ const SIDE_PROJECTS = [
           {
             "title": "império de tolsty kot",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/imperio-de-tolsty-kot.mp3",
+            "src": "./assets/audio/wabi-sabi/imperio-de-tolsty-kot.mp3",
             "duration": 66.36,
             "bpm": 120,
             "genres": [
@@ -1598,7 +1598,7 @@ const SIDE_PROJECTS = [
           {
             "title": "hallelujah",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/hallelujah.mp3",
+            "src": "./assets/audio/wabi-sabi/hallelujah.mp3",
             "duration": 117.336,
             "bpm": 70,
             "genres": [
@@ -1615,7 +1615,7 @@ const SIDE_PROJECTS = [
           {
             "title": "meant for joy",
             "detail": "",
-            "src": "../assets/audio/wabi-sabi/meant-for-joy.mp3",
+            "src": "./assets/audio/wabi-sabi/meant-for-joy.mp3",
             "duration": 73.416,
             "bpm": 120,
             "genres": [

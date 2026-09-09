@@ -148,20 +148,20 @@ async function handleApi(req, res, url) {
     const measured = await probeDuration(file);
     const sent = Number(url.searchParams.get("duration"));
     return send(res, 200, {
-      src: `../assets/audio/${project}/${name}.mp3`,
+      src: `./assets/audio/${project}/${name}.mp3`,
       duration: measured ?? (Number.isFinite(sent) && sent > 0 ? sent : 0),
       bytes: data.length,
       measuredBy: measured != null ? "afinfo" : "browser",
     });
   }
 
-  // Artwork. Everything the site shows as a preview lives in redesign/previews.
+  // Artwork. Everything the site shows as a preview lives in previews/.
   if (route === "upload/image" && req.method === "POST") {
     const name = slug(url.searchParams.get("name") || "");
     const ext = (url.searchParams.get("ext") || "webp").replace(/[^a-z0-9]/gi, "").toLowerCase();
     if (!name) throw new Error("upload needs a name");
     if (!["webp", "png", "jpg", "jpeg", "gif"].includes(ext)) throw new Error(`bad image type .${ext}`);
-    const dir = resolveInRepo("redesign", "previews");
+    const dir = resolveInRepo("previews");
     await mkdir(dir, { recursive: true });
     const data = await readBody(req, 16 * 1024 * 1024);
     if (!data.length) throw new Error("upload was empty");
@@ -250,6 +250,6 @@ server.on("error", (error) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`admin   http://${HOST}:${PORT}/admin/`);
-  console.log(`site    http://${HOST}:${PORT}/redesign/index.html`);
+  console.log(`site    http://${HOST}:${PORT}/index.html`);
   console.log(`editing ${ROOT}`);
 });

@@ -1,53 +1,249 @@
+/* ==========================================================================
+   matt swan
+   Everything is expressed in *design pixels* taken straight from the Figma
+   frame (1920 wide). app.js sets --scale = viewportWidth / 1920 and this
+   sheet derives one unit from it, so the whole page is the same layout at
+   every screen size, just scaled — nothing reflows.
+     1rem = 10 design px   (so 60px type = 6rem, 190px box = 19rem)
+   ========================================================================== */
+
+/* The palette, registered as real colour properties. That's what makes a
+   palette change animate: a plain custom property jumps from one value to the
+   next, but a registered <color> interpolates, and every declaration that
+   reads it through var() re-resolves each frame. So one transition on :root
+   crossfades the whole page — text, rings, masked buttons, the lot — and the
+   canvas layer follows the same tokens (see syncPaletteFromCss in field.js).
+
+   Change them anywhere: edit the values below, set them on :root from script
+   (setPalette does exactly that), or type them into devtools. */
+@property --bg {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #242228;
+}
+@property --gold {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #b18050;
+}
+@property --cream {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #fff2e5;
+}
+@property --muted {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #9c8979;
+}
+
+/* The dot palette. Most projects have one accent and every circle wears it,
+   so all five of these hold that same colour; a project can instead hand
+   setPalette a list (wabi sabi does), and then each dot, and each track's
+   progress bar, is dealt one of the five. They're registered like the rest
+   of the palette, so arriving at such a project doesn't cut — the circles
+   fan out from one colour into five, and collapse back on the way out. */
+@property --dot-1 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #b18050;
+}
+@property --dot-2 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #b18050;
+}
+@property --dot-3 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #b18050;
+}
+@property --dot-4 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #b18050;
+}
+@property --dot-5 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #b18050;
+}
+
 :root {
-  --red: #bf032c;
-  --black: #121212;
-  --white: #ffffff;
-  --inactive: #919191;
-  --inactive-hover: #696969;
-  --active: var(--red);
-  --stage-bg: var(--white);
-  --logo-bg: var(--red);
-  --red-stripe: var(--red);
-  --own-music-link: var(--red);
-  --site-scale: 0.5;
-  --scaled-site-width: 960px;
-  --scaled-stage-height: 3350px;
+  --scale: 1;
+
+  /* palette — the only place hex values live */
+  --bg: #242228;
+  --gold: #b18050;
+  --cream: #fff2e5;
+  --dot-1: #b18050;
+  --dot-2: #b18050;
+  --dot-3: #b18050;
+  --dot-4: #b18050;
+  --dot-5: #b18050;
+
+  /* how long a palette change takes; setPalette can override it per call */
+  --palette-fade: 600ms;
+
+  /* The one hover colour on the page: the accent, lifted toward white.
+     Everything that used to hover to a flat --gold now uses it — the menu
+     (open section included), the view toggle, the project titles in both
+     tabs, and the links that sit with them. Derived from --gold, so a new
+     palette needs no hover colour of its own.
+       lightness: 0.377 of the headroom left above the accent (bounded, so it
+                  can never blow past white however light the accent is)
+       chroma:    held at 0.94, hue untouched
+     Against this palette that resolves to exactly #dbab7d from #b18050. */
+  --hover-lift: 0.377;
+  --hover-chroma: 0.94;
+  --hover: oklch(
+    from var(--gold) calc(l + (1 - l) * var(--hover-lift)) calc(c * var(--hover-chroma)) h
+  );
+
+  /* The passive tone — unselected menu items, genre tags, track details, the
+     shuffle button while it's off, "(wip)". It used to be a flat #9c8979
+     that stayed warm-grey however cool the accent went. Measured in oklch
+     against the default accent, that grey turns out to be the accent itself
+     with the colour taken almost all the way out:
+       #b18050  L 0.63799  C 0.08839  H 64.5
+       #9c8979  L 0.64274  C 0.03274  H 62.3
+     — same lightness (x1.007), same hue, chroma cut to 0.370. Written that
+     way it reproduces #9c8979 exactly on the default palette, and every
+     other palette gets a passive tone of its own warmth: warm under kletka,
+     cool under kylskap, still neutral under the two accents that are
+     already grey. Derived rather than transitioned, so it rides --gold's
+     own animation instead of chasing it a step behind. */
+  --muted-lift: 1.00745;
+  --muted-chroma: 0.3704;
+  --muted: oklch(from var(--gold) calc(l * var(--muted-lift)) calc(c * var(--muted-chroma)) h);
+
+  /* one section's content fading out before the next fades in */
+  --tab-fade: 260ms;
+
+  /* Figma drop shadow on the artwork circles: X 0, Y 0, blur 24.4, spread 0,
+     #000000 at 25%.
+     Not drop-shadow() on a wrapper: Safari rasterises a filtered layer at CSS
+     resolution, so the masked artwork inside one came out with a staircased
+     edge on a retina screen. Instead the shadow is its own layer behind the
+     artwork — the same blob outline, filled flat and blurred — which leaves
+     nothing masked inside a filter. Same maths either way: drop-shadow's
+     blur radius is 2 sigma, and blur()'s is sigma, hence 24.4 -> 12.2. */
+  --art-shadow-color: rgba(0, 0, 0, 0.25);
+  --art-shadow-blur: 1.22rem;
+  --art-shadow-spread: 0rem;
+
+  /* Figma drop shadow on the playing logo: X 0, Y 0, blur 4, spread 2,
+     #000000 at 25%. The spread is 5 higher than the board's 2 because the
+     ring is drawn as a spread on the same box: Figma casts a layer's shadow
+     from the outer edge of its stroke, so it has to clear the ring's own 5
+     first (5 + 2). Anything less and the opaque ring would hide it. */
+  --logo-shadow: 0 0 0.4rem 0.7rem rgba(0, 0, 0, 0.25);
+  transition:
+    --bg var(--palette-fade) linear,
+    --gold var(--palette-fade) linear,
+    --cream var(--palette-fade) linear,
+    --dot-1 var(--palette-fade) linear,
+    --dot-2 var(--palette-fade) linear,
+    --dot-3 var(--palette-fade) linear,
+    --dot-4 var(--palette-fade) linear,
+    --dot-5 var(--palette-fade) linear;
+
+  --design-width: 1920;
+
+  /* Timing for the idle <-> playing change. app.js overwrites --reveal with
+     the canvas's own progress-bar reveal duration so the two stay in step;
+     the fallback matches its current value. --ease is easeInOutCubic, the
+     same curve field.js tweens with. */
+  --reveal: 2000ms;
+  --post-reveal: 400ms; /* for the bits that wait for --reveal to finish */
+  --ease: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Opening and closing a project, and swapping one of its categories for
+     another: its own, slower clock. Whatever sits below travels the whole
+     height change, so what reads as "abrupt" is the peak speed in the middle
+     rather than the length — easeInOutQuint spent most of the move at 3x the
+     average rate. easeInOutSine's peak is 1.57x, and 900ms over 750 takes
+     another fifth off it. */
+  --accordion: 900ms;
+  --accordion-ease: cubic-bezier(0.37, 0, 0.63, 1); /* easeInOutSine */
+
+  /* Mask shapes. Each is a Figma export whose ragged edge is a
+     feTurbulence/feDisplacementMap filter, and Chrome runs that filter at the
+     size the mask is painted — which at these sizes quantises the edge to a
+     few alpha levels and staircases it. app.js (buildMasks) rasterises each
+     one once at a large size and replaces these with the bitmap, which the
+     browser then downscales smoothly. The file URLs stay as the fallback for
+     the frames before that finishes. */
+  --blob-1: url("./assets/circle-blob.svg");
+  --blob-2: url("./assets/circle-blob-2.svg");
+  --blob-3: url("./assets/circle-blob-3.svg");
+  --blob-4: url("./assets/circle-blob-4.svg");
+  --blob-5: url("./assets/circle-blob-5.svg");
+  --blob-6: url("./assets/circle-blob-6.svg");
+  --mask-bar: url("./assets/track-bar.svg");
+  --mask-play: url("./assets/icon-play.svg");
+  --mask-stop: url("./assets/icon-pause.svg");
+  --mask-thumb: url("./assets/player-slider.svg");
+  --mask-view-list: url("./assets/view-list.svg");
+  --mask-view-field: url("./assets/view-field.svg");
+  --mask-view-smile: url("./assets/view-smile.svg");
 }
 
-* {
-  box-sizing: border-box;
+/* Which of the five an element was dealt. The number is fixed when the
+   element is built, so a dot keeps its place in the palette for the life of
+   the page and only the colour under it changes; --tint inherits, so a
+   track row hands its share down to the bar inside it. Anything without the
+   attribute falls back to the accent — and so does everything with one when
+   the palette lists no dots, since all five slots hold the accent then. That
+   is what lets the open menu button use its slot: on every other palette
+   that resolves to plain --gold. */
+[data-tint="1"] {
+  --tint: var(--dot-1);
+}
+[data-tint="2"] {
+  --tint: var(--dot-2);
+}
+[data-tint="3"] {
+  --tint: var(--dot-3);
+}
+[data-tint="4"] {
+  --tint: var(--dot-4);
+}
+[data-tint="5"] {
+  --tint: var(--dot-5);
 }
 
-html,
-body {
-  margin: 0;
-  min-width: 0;
-  min-height: 100%;
+html {
+  /* the unit everything scales from */
+  font-size: calc(var(--scale) * 10px);
+  background: var(--bg);
 }
 
-body {
-  min-height: 100vh;
-  background: var(--stage-bg);
-  color: var(--active);
-  overflow-x: hidden;
-  transition: background-color 650ms ease;
-}
-
-button {
-  border: 0;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-}
-
+/* The previous site's preloader, in this one's own background colour: a full
+   screen of it that drops away once the page is up, so the first paint is a
+   flat field rather than half-built furniture. The curve and the timings are
+   the original's. It starts on its own after a beat even if a script never
+   gets to it, and script only adds .is-hidden at the end so it stops eating
+   clicks. */
 .page-preloader {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: var(--red);
+  background: var(--bg);
   pointer-events: auto;
-  animation: preloader-exit 1000ms cubic-bezier(0.76, 0, 0.24, 1) 200ms forwards;
+}
+
+/* It leaves when the page is actually ready, not on a timer — see
+   whenPageReady in app.js. On a timer it uncovered the page mid-build, and
+   the menu, then the logo, then the circles and the rows arrived one after
+   another in full view.
+
+   Named `is-dropping` and not `is-leaving`, which is already the panel
+   crossfade's class further down and carries `opacity: 0`. Sharing it made
+   the cover vanish on the spot while this animation played out invisibly
+   underneath — the slide was running the whole time, just on nothing. */
+.page-preloader.is-dropping {
+  animation: preloader-exit 1000ms cubic-bezier(0.76, 0, 0.24, 1) forwards;
 }
 
 .page-preloader.is-hidden {
@@ -65,1486 +261,1504 @@ button {
   }
 }
 
-.stage-shell {
-  position: relative;
-  width: var(--scaled-site-width);
-  height: var(--scaled-stage-height);
-  margin: 0 auto;
-  overflow: hidden;
+/* Held for the frame a new scale is applied on: without it, everything with
+   a size transition would animate itself to the new size. */
+.is-rescaling * {
+  transition: none !important;
 }
 
-.stage {
-  position: relative;
-  width: 1920px;
-  min-height: 1080px;
-  overflow: hidden;
-  background: var(--stage-bg);
-  transform: scale(var(--site-scale));
-  transform-origin: top left;
-  transition: background-color 650ms ease;
+/* Held for the length of a palette change. The elements' own colour
+   transitions (the 0.2s hover fades) would otherwise chase the token's
+   interpolation and land ~200ms after it, so text would finish recolouring
+   later than the background and the canvas. Muted here, everything reads the
+   token's current value directly and the whole page arrives together. The
+   descendant combinator keeps :root itself — and so the token transition —
+   out of it.
+
+   What is muted is colour specifically, not movement. Killing transitions
+   outright also stopped everything that happens to be moving at the same
+   moment — and a palette change lands on exactly the beat a track starts or
+   changes, which is when the most is moving: the logo shrinking to its badge,
+   the cover lifting and dropping, the now-playing block gliding as a name
+   wraps to another line. Each of those snapped. Naming the properties that may
+   still transition says what was meant all along, and needs no list of
+   exceptions to keep up with. */
+:root.is-repainting * {
+  transition-property: width, height, border-radius, opacity, transform !important;
 }
 
-.theme-projects .stage {
-  min-height: 6700px;
+* {
+  box-sizing: border-box;
 }
 
-html.is-desktop-webkit .theme-projects .stage {
-  min-height: 6570px;
+/* Every gap in this design is an explicit number, so no element may bring a
+   margin of its own. (The browser's default `p { margin: 1em 0 }` was pushing
+   the genre tags a whole line below the row of circles they align to.) */
+p,
+h1,
+h2,
+h3 {
+  margin: 0;
 }
 
-.theme-all-music .stage {
-  min-height: 2960px;
-}
-
-.theme-contact .stage {
-  min-height: 1930px;
-}
-
-html.is-chromium .theme-all-music .stage {
-  min-height: 3060px;
-}
-
-html.is-chromium .theme-contact .stage {
-  min-height: 2030px;
-}
-
-.theme-projects {
-  --stage-bg: var(--white);
-  --logo-bg: var(--red);
-  --red-stripe: var(--red);
-  --active: var(--red);
-  --inactive: #919191;
-}
-
-.theme-all-music {
-  --stage-bg: var(--red);
-  --logo-bg: var(--red);
-  --red-stripe: var(--red);
-  --active: var(--white);
-  --inactive: #c6c6c6;
-  --inactive-hover: #949494;
-}
-
-.theme-all-music[data-music-tab="own-music"] {
-  --stage-bg: var(--black);
-  --logo-bg: var(--black);
-  --red-stripe: var(--black);
-  --inactive: #919191;
-  --inactive-hover: #696969;
-}
-
-.theme-all-music[data-music-tab="soundtracks"] .music-content > .site-footer {
-  display: none;
-}
-
-.theme-contact {
-  --stage-bg: var(--black);
-  --logo-bg: var(--black);
-  --red-stripe: var(--black);
-  --active: var(--white);
-  --inactive: #919191;
-}
-
-.logo-card {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 4;
-  width: 480px;
-  height: 480px;
-  display: grid;
-  align-items: center;
-  justify-items: start;
-  padding-left: 64px;
-  background: var(--logo-bg);
-  transition: background-color 650ms ease;
-}
-
-.logo-text {
-  display: grid;
-  justify-items: start;
-  color: var(--white);
-  font-family: "Jacquarda Bastarda 9", system-ui, sans-serif;
-  font-size: 130px;
-  font-weight: 400;
-  line-height: 0.78;
-  letter-spacing: 0;
-  text-align: left;
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--cream);
+  font-family: "Tomorrow", system-ui, sans-serif;
+  /* Nearly everything here is a control or a caption, and dragging across
+     them selected headings, menu words and track times as if they were copy.
+     Selection is switched off wholesale and handed back below to the two
+     things that are actually prose. */
   user-select: none;
+  -webkit-user-select: none;
+  /* clip, not hidden: `overflow-x: hidden` forces the used overflow-y to
+     auto, which makes this a scroll container and can cost the page its
+     elastic bounce. `clip` establishes no scroll container at all, so
+     overflow-y stays visible and the bounce is the browser's own. */
+  overflow-x: clip;
 }
 
-@supports (text-box-trim: both) {
-  .logo-text {
-    line-height: normal;
-  }
-
-  .logo-text span {
-    text-box-trim: both;
-    text-box-edge: cap alphabetic;
-  }
+/* The prose: a feed post's body, and a project's write-up in the list. */
+.feed-text,
+.row-text {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
 }
 
-.stripe-field {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 3;
-  width: 1440px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
+/* The elastic overscroll at the page's ends is left to the browser. It was
+   off for a while: Safari drags position:fixed elements with the page during
+   a bounce *and* reports a scroll offset past the end, so the fixed canvas
+   moved twice as far as the document and the player looked sprung. Both
+   halves of that are gone now — the player draws on its own in-flow canvas,
+   and field.js clamps its scroll offset to [0, maxScroll] — so the bounce
+   carries the whole page, canvas included, as one piece. */
+html {
+  overscroll-behavior: auto;
 }
 
-.stripe {
-  width: 80px;
-  height: 480px;
-  flex: 0 0 80px;
-  transition:
-    height 780ms cubic-bezier(0.65, 0, 0.2, 1),
-    background-color 650ms ease;
-}
-
-.stripe--white {
-  background: var(--white);
-}
-
-.stripe--red {
-  background: var(--red-stripe);
-}
-
-.title-nav {
-  position: absolute;
-  top: 560px;
-  left: 72px;
-  z-index: 5;
-  width: 900px;
-  height: 360px;
-}
-
-.title-link {
+/* The player's canvas: in the document's own flow, one band tall, so the
+   browser scrolls it exactly like the DOM. 110rem covers everything the
+   player paints (measured: design y 334..940) with room to spare. */
+#stagePlayer {
   position: absolute;
   left: 0;
   top: 0;
-  display: block;
-  height: 82px;
-  color: var(--inactive);
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 100px;
-  font-weight: 400;
-  line-height: 0.82;
-  letter-spacing: 0;
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-  transform: translate3d(0, 0, 0);
-  will-change: color, font-size, height, transform;
-  transition:
-    color 220ms ease,
-    font-size 780ms cubic-bezier(0.65, 0, 0.2, 1),
-    height 780ms cubic-bezier(0.65, 0, 0.2, 1),
-    transform 780ms cubic-bezier(0.65, 0, 0.2, 1);
-}
-
-.title-link[data-section="projects"] {
-  transform: translate3d(0, 0, 0);
-}
-
-.title-link[data-section="all-music"] {
-  transform: translate3d(0, 188px, 0);
-}
-
-.title-link[data-section="contact"] {
-  transform: translate3d(0, 254px, 0);
-}
-
-body[data-active-section="all-music"] .title-link[data-section="all-music"] {
-  transform: translate3d(0, 106px, 0);
-}
-
-body[data-active-section="contact"] .title-link[data-section="all-music"] {
-  transform: translate3d(0, 86px, 0);
-}
-
-body[data-active-section="contact"] .title-link[data-section="contact"] {
-  transform: translate3d(0, 196px, 0);
-}
-
-.title-link:hover:not(.is-active),
-.title-link:focus-visible:not(.is-active) {
-  color: var(--inactive-hover);
-}
-
-.title-link.is-active {
-  height: 164px;
-  color: var(--active);
-  font-size: 200px;
-}
-
-html.is-webkit .title-link {
-  height: 82px;
-  font-size: 100px;
-  will-change: color;
-  transition: color 220ms ease;
-}
-
-html.is-webkit .title-link[data-section="projects"] {
-  transform: translate3d(0, -10px, 0);
-}
-
-html.is-webkit .title-link[data-section="all-music"],
-html.is-webkit body[data-active-section="all-music"] .title-link[data-section="all-music"],
-html.is-webkit body[data-active-section="contact"] .title-link[data-section="all-music"] {
-  transform: translate3d(0, 66px, 0);
-}
-
-html.is-webkit .title-link[data-section="contact"],
-html.is-webkit body[data-active-section="contact"] .title-link[data-section="contact"] {
-  transform: translate3d(0, 132px, 0);
-}
-
-html.is-webkit .title-link.is-active {
-  height: 82px;
-  font-size: 100px;
-}
-
-.title-link:focus-visible {
-  outline: 4px solid currentColor;
-  outline-offset: 8px;
-}
-
-.section-content[hidden] {
-  display: none;
-}
-
-.section-content {
-  opacity: 0;
+  width: 100%;
+  height: 110rem;
   pointer-events: none;
-  transition: opacity 520ms ease;
 }
 
-.section-content.is-visible {
-  opacity: 1;
-  pointer-events: auto;
+#stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  /* the circles are decoration + their own hit-testing lives in field.js,
+     which listens on the window — so the canvas itself must never eat a
+     click meant for the page */
+  pointer-events: none;
+  z-index: 0;
 }
 
-.site-footer {
+/* The 1920-wide design surface. Width is 100% (the scale factor already
+   maps 1920 design px onto the viewport), and children sit at their exact
+   design coordinates. */
+.page {
+  position: relative;
+  z-index: 1;
+  width: 192rem;
+  margin: 0 auto;
+  padding-bottom: 20rem;
+}
+
+/* A field fills the page to its own last row of circles, so the breathing
+   room the lists want underneath would just be empty scroll. */
+.page.is-field-view {
+  padding-bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Logo / now playing.
+   Idle    — Figma frame 7:31:    logo 120x120 @ (152,303), above the menu.
+   Playing — Figma frame 7:14853: cover 190x190 @ (108,300) spinning behind
+             the logo, which is now a round 80x80 badge with a 5px
+             background-coloured ring @ (163,355); text @ x=338.
+   -------------------------------------------------------------------------- */
+
+/* This box is the cover's (108,300,190,190) and stays put in both states —
+   the logo inside it is positioned per state, since the board puts its
+   centre at (212,363) idle and (203,395) playing. */
+/* Every y below is the board's own coordinate less PAGE_LIFT (100 design px),
+   which raises the whole page. The content block is lifted a further 91 on
+   top of that, so the gap under the menu matches the one above it — see
+   .content. */
+.brand {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  z-index: 30;
-  width: 1920px;
-  height: 200px;
-  padding: 47px 0 0 75px;
-  color: #949494;
-  background: #121212;
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 40px;
-  font-weight: 400;
-  line-height: 35px;
-  letter-spacing: 0;
+  z-index: 3; /* above .content, whose top padding reaches up over the header */
+  left: 10.8rem;
+  top: 20rem; /* 300 - 100 */
+  width: 19rem;
+  height: 19rem;
 }
 
-.site-footer p {
-  margin: 0;
-}
-
-.site-footer a {
-  color: inherit;
-  text-decoration: none;
-  transition: color 220ms ease;
-}
-
-.site-footer a:hover,
-.site-footer a:focus-visible {
-  color: var(--white);
-}
-
-.projects-content {
+/* the cover — only while a track plays */
+.brand-art {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  color: #919191;
-  font-family: "Jersey 25", system-ui, sans-serif;
+  opacity: 0;
+  transform: scale(0.42); /* 80/190: grows out from behind the logo */
+  transition:
+    opacity var(--reveal) var(--ease),
+    transform var(--reveal) var(--ease);
 }
 
-.project-image {
+.brand.is-playing .brand-art {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Changing the record: the cover goes back down to exactly where it comes up
+   from — 0.42 is the logo badge's own size, so it withdraws behind the badge
+   rather than shrinking in mid-air — the artwork is swapped while it is out
+   of sight, and it rises again. The same movement the reveal makes, played
+   short; app.js sets the duration per half, since the lift and the drop are
+   deliberately not the same length. */
+.brand.is-playing.is-swapping .brand-art {
+  opacity: 0;
+  transform: scale(0.42);
+}
+
+/* The spinning half: the blob outline lives here rather than on .brand-art,
+   so the wobble turns with the picture instead of the picture turning inside
+   a fixed hole. It keeps its own element because .brand-art already animates
+   `transform` for the reveal, and driving rotation from the same property
+   means the browser interpolates two mismatched transform lists as matrices
+   — which is what made the direction unpredictable.
+
+   The animation is never cancelled. Bound to .is-playing it stopped the
+   moment you pressed stop, snapping the cover back to 0deg while it was still
+   on screen shrinking away. Its *rate* is what changes instead: app.js drives
+   it from the record's own playbackRate (see syncPlatter), so the cover comes
+   up to speed with the sound, drags as it winds down and holds still — at
+   whatever angle it reached — once the record has stopped. */
+.brand-art-spin {
   position: absolute;
-  z-index: 1;
+  inset: 0;
+  animation: brand-spin 14s linear infinite;
+  mask-image: var(--blob-1);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--blob-1);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.brand-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
-  max-width: none;
-  height: auto;
-  image-rendering: pixelated;
-  user-select: none;
 }
 
-.project-image--kletka {
-  top: 1120px;
-  left: 0;
-  width: 976px;
+/* positive rotation is clockwise (the y axis points down) */
+@keyframes brand-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.project-image--fictional {
-  top: 2220px;
-  left: -224px;
-  width: 1200px;
-  -webkit-clip-path: inset(var(--fictional-clip-top, 0px) 0 0 0);
-  clip-path: inset(var(--fictional-clip-top, 0px) 0 0 0);
-}
+/* The logo itself: a square 120x120 mark when idle, a round 80x80 badge with
+   a background-coloured ring once playing — only the size and shape change,
+   the centre never moves.
+     idle    120x120, sizes from the board's (152,303,120,120)
+     playing  80x80  @ (163,355), i.e. concentric with the cover
+   The board actually puts the idle centre 9px right and 32px up of the
+   playing one; both are pinned to the cover's centre (203,395) instead, so
+   the mark can't drift across the screen when playback starts or stops.
 
-.project-image--downsouth {
-  top: 3270px;
-  left: -223px;
-  width: 1243px;
-  height: 1152px;
-}
-
-.project-image--school {
-  top: 4550px;
-  left: -360px;
-  width: 1920px;
-}
-
-.project-copy {
+   Placed by its centre (left/top mark the centre, pulled back by the
+   translate) rather than by a corner, so the resize grows and shrinks it
+   symmetrically about that fixed point. Scaling with transform would do the
+   same, but it would thin the 5px ring below with it. */
+.brand-logo {
   position: absolute;
-  left: 1055px;
-  z-index: 2;
-  width: 780px;
+  left: 9.5rem; /* centre x: 203 - 108 */
+  top: 9.5rem; /* centre y: 395 - 300 */
+  width: 12rem;
+  height: 12rem;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  border-radius: 0;
+  /* The ring below is a box-shadow, painted just outside the border box,
+     while the badge's own art is clipped by border-radius — and the clip's
+     antialiased edge blends to transparent, which showed as a hairline of
+     the spinning cover between the two. Filling the box with the ring's own
+     colour gives that edge something to blend into instead of a gap. */
+  background: var(--bg);
+  /* The ring, grown outward from the badge's edge rather than eaten out of
+     it — the mark keeps its full 80x80 and the ring separates it from the
+     cover turning behind. A shadow's spread, not a border: border-width
+     rounds to whole device pixels and visibly thinned the ring at narrow
+     viewports (5 design px came out 3.5), while a spread keeps its
+     sub-pixel value and scales exactly with the design.
+     It also can't be a pseudo-element: this box is overflow:hidden for the
+     logo art, which would clip an outer ring drawn by a child. */
+  /* two shadows, in the same order in both states so they interpolate: the
+     ring, and the drop shadow it casts */
+  box-shadow:
+    0 0 0 0 var(--bg),
+    0 0 0 0 rgba(0, 0, 0, 0);
+  transition:
+    width var(--reveal) var(--ease),
+    height var(--reveal) var(--ease),
+    border-radius var(--reveal) var(--ease),
+    box-shadow calc(var(--reveal) * 0.8) var(--ease);
 }
 
-.project-copy--kletka {
-  top: 980px;
+/* On the way in the ring starts a fifth of the way through the rounding and
+   lands exactly as the shrink finishes (0.2 + 0.8 = 1). Same curve as the
+   shrink itself, so it eases in and out with it rather than running flat.
+   On the way out it goes first — no delay — so it never lingers over a mark
+   that's already growing back into a square. */
+.brand.is-playing .brand-logo {
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 0.5rem var(--bg),
+    var(--logo-shadow);
+  transition:
+    width var(--reveal) var(--ease),
+    height var(--reveal) var(--ease),
+    border-radius var(--reveal) var(--ease),
+    box-shadow calc(var(--reveal) * 0.8) var(--ease) calc(var(--reveal) * 0.2);
 }
 
-.project-copy--fictional {
-  top: 2190px;
+.brand-logo svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.project-copy--downsouth {
-  top: 3320px;
+/* palette hooks — the traced logo carries these two classes, so it recolours
+   with the rest of the page */
+.brand-logo .logo-ground {
+  fill: var(--bg);
 }
 
-.project-copy--school {
-  top: 4550px;
-  width: 980px;
+.brand-logo .logo-mark {
+  fill: var(--gold);
 }
 
-.project-copy--school .project-heading {
+/* Track + source, beside the badge — Figma: x=338, first line y=355.
+
+   Pinned to the cover's own centreline rather than to that first line, so the
+   block stays centred on the turning circle however many lines it runs to.
+   At two lines the two agree exactly, which is what the board drew; it is the
+   three- and four-line cases, where a long name wraps, that used to hang low.
+   The shift is set in script (renderNowPlaying) from the measured height, so
+   the change is a value the browser can move between — a bare translateY(-50%)
+   would land on the new height with nothing to animate. */
+.np-meta {
+  position: absolute;
+  left: 23rem; /* 338 - 108 */
+  top: 9.5rem; /* the cover's centre: 395 - 300 */
+  transform: translateY(var(--np-shift, -50%));
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition:
+    opacity var(--reveal) var(--ease),
+    transform var(--post-reveal) var(--ease);
+  pointer-events: none;
   white-space: nowrap;
 }
 
-html.is-desktop-webkit .project-image--kletka {
-  top: 990px;
+/* Long names take a second line instead of running out under the player —
+   the track's, and the project's underneath it, on the same rule.
+   A real width, not a max-width: .np-meta is a shrink-to-fit box inside
+   .brand, which is only 190 wide, so a wrapping child has almost no room to
+   be offered and would break after every word or two. 620 runs from the
+   text's own x=338 to well clear of the player cluster at 1090, and balance
+   splits the two lines evenly rather than leaving one word on the second. */
+.np-track.is-wrapped,
+.np-album.is-wrapped {
+  white-space: normal;
+  width: 62rem;
+  text-wrap: balance;
 }
 
-html.is-desktop-webkit .project-image--fictional {
-  top: 2090px;
+.brand.is-playing .np-meta {
+  opacity: 1;
 }
 
-html.is-desktop-webkit .project-image--downsouth {
-  top: 3140px;
+.np-track,
+.np-album {
+  font-size: 4rem;
+  line-height: 4rem;
 }
 
-html.is-desktop-webkit .project-image--school {
-  top: 4420px;
+.np-track {
+  color: #ffffff;
 }
 
-html.is-desktop-webkit .project-copy--kletka {
-  top: 850px;
+.np-album {
+  color: var(--muted);
 }
 
-html.is-desktop-webkit .project-copy--fictional {
-  top: 2060px;
+/* the download readout that follows the title while a track is still arriving
+   — the source line's tone, so it reads as an aside to the name rather than
+   part of it */
+.np-loading {
+  color: var(--muted);
 }
 
-html.is-desktop-webkit .project-copy--downsouth {
-  top: 3190px;
-}
+/* --------------------------------------------------------------------------
+   player cluster — Figma: 741x741 @ (1090,267). Only a mount; the dots,
+   icons and progress bar are painted on the canvas by field.js.
+   -------------------------------------------------------------------------- */
 
-html.is-desktop-webkit .project-copy--school {
-  top: 4420px;
-}
-
-.project-heading,
-.project-subtitle,
-.project-text,
-.project-links {
-  margin: 0;
-  letter-spacing: 0;
-  font-weight: 400;
-}
-
-.project-heading {
-  color: var(--red);
-  font-size: 140px;
-  line-height: 0.82;
-}
-
-.project-heading--fictional {
-  display: grid;
-  line-height: 100px;
-}
-
-.project-subtitle {
-  color: #919191;
-  font-size: 140px;
-  line-height: 0.82;
-}
-
-.project-copy--school .project-subtitle {
-  margin-top: -10px;
-}
-
-.project-text {
-  width: 720px;
-  margin-top: 26px;
-  color: #919191;
-  font-size: 40px;
-  line-height: 42px;
-}
-
-.project-text p {
-  margin: 0 0 44px;
-}
-
-.project-text p:last-child {
-  margin-bottom: 0;
-}
-
-.project-links {
-  display: grid;
-  justify-items: start;
-  margin-top: 42px;
-}
-
-.project-links a {
-  color: var(--red);
-  font-size: 100px;
-  line-height: 76px;
-  text-decoration: none;
-  transition: color 220ms ease;
-}
-
-.project-links--single {
-  margin-top: 38px;
-}
-
-.project-link--listen:hover,
-.project-link--listen:focus-visible {
-  color: #8b001e;
-}
-
-.project-link--steam:hover,
-.project-link--steam:focus-visible {
-  color: #31273a;
-}
-
-.project-link--youtube:hover,
-.project-link--youtube:focus-visible {
-  color: #f30035;
-}
-
-.music-content {
+.player-mount {
   position: absolute;
-  inset: 0;
-  z-index: 1;
-  color: var(--white);
-  font-family: "Jersey 25", system-ui, sans-serif;
+  left: 109rem;
+  top: 16.7rem; /* 267 - 100 */
+  width: 74.1rem;
+  height: 74.1rem;
 }
 
+/* --------------------------------------------------------------------------
+   nav — Figma: x=139, first item y=699, 63px step, ZCOOL KuaiLe 60px
+   -------------------------------------------------------------------------- */
+
+/* .content starts at y=0 and pads its way down to the list, so its box sits
+   over the nav; without a stacking order of its own the nav would never see
+   a click. */
+.nav {
+  position: absolute;
+  z-index: 3;
+  left: 13.9rem;
+  top: 59.9rem; /* 699 - 100 */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.nav-link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 6.3rem;
+  color: var(--cream);
+  transition: color 0.2s ease;
+}
+
+.nav-link.is-active {
+  color: var(--tint, var(--gold));
+}
+
+/* Hovering any section, open or not. Same lift as --hover, but taken from
+   the button's own slot instead of the accent: on a palette that lists dots
+   each menu item hovers to a lighter version of the colour it turns when
+   it's the open one, and on every other palette the slot holds the accent,
+   so this is --hover exactly. The mix is the fallback for browsers without
+   relative colour syntax; where that syntax works the second declaration
+   wins, and both read the palette rather than a hard-coded colour. */
+.nav-link:hover {
+  color: color-mix(in oklch, var(--tint, var(--gold)) 62%, var(--cream));
+  color: oklch(
+    from var(--tint, var(--gold)) calc(l + (1 - l) * var(--hover-lift))
+      calc(c * var(--hover-chroma)) h
+  );
+}
+
+/* --------------------------------------------------------------------------
+   projects — the list starts at the first row's artwork top (y=1349)
+   -------------------------------------------------------------------------- */
+
+/* The board put the first artwork at 1349, which left the menu floating: 398
+   from "contacts" down to the first circle against 307 from the logo down to
+   "projects". The block is raised 91 to make those two gaps equal, and 100
+   more with the rest of the page. Every element that sits above this line is
+   positioned absolutely against .content rather than by this padding — the
+   view toggle, the music sub-nav — so each carries the same 191 itself. */
+.content {
+  position: relative;
+  padding-top: 115.8rem; /* 1349 - 91 - 100 */
+}
+
+/* Every switch on the page crossfades the same way: what's on screen goes to
+   zero opacity, and only then does the next thing come up (app.js does the
+   hand-off in fadeSwap, since the outgoing panel has to leave the layout
+   before the incoming one measures itself). Three sets of panels use it —
+   the menu's sections, the music sub-nav, and the list/field view. */
+.tab,
+.music-list,
+.music-tagfield,
+.music-panel,
+.projects-list,
+.projects-field,
+.music-tracks {
+  transition: opacity var(--tab-fade) linear;
+}
+
+.is-leaving,
+.is-entering {
+  opacity: 0;
+}
+
+/* nothing that's fading out should still be clickable */
+.is-leaving {
+  pointer-events: none;
+}
+
+/* view toggle — Figma: list icon 49.31x64.09 @ (1588,1408),
+   field icon 210x210 @ (1608,1336) */
+/* sits at the first row's level — the button offsets below are relative to
+   the first artwork's top (y=1349) */
+.view-toggle {
+  position: absolute;
+  top: 115.8rem; /* 1349 - 191, in step with .content */
+  left: 0;
+  width: 100%;
+  height: 0;
+  /* the rows below are position:relative and come later in the DOM, so the
+     buttons need to be lifted above them to stay clickable */
+  z-index: 2;
+}
+
+.view-btn {
+  position: absolute;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  /* The icons are masks rather than images, so their colour comes from the
+     palette, and they follow the sub-nav's words exactly: the accent for the
+     view you're in, the muted tone for the one you aren't. */
+  background-color: var(--muted);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 100% 100%;
+  transition: background-color 0.2s ease;
+}
+
+.view-btn.is-active {
+  background-color: var(--gold);
+}
+
+/* the same hover the menu uses, for the button you're on and the one you
+   aren't */
+.view-btn:hover {
+  background-color: color-mix(in oklch, var(--gold) 62%, var(--cream));
+  background-color: var(--hover);
+}
+
+/* Square hit area so it's an easier target: the box grows from 49.31 wide to
+   64.09 (its own height) about the same centre, and the glyph is held at its
+   drawn size and centred, so what you see doesn't move. */
+.view-btn[data-view="list"] {
+  left: 158.061rem; /* centre kept at 1612.66, box now 64.09 wide */
+  top: 5.9rem; /* 1408 - 1349 */
+  width: 6.409rem;
+  height: 6.409rem;
+  mask-image: var(--mask-view-list);
+  mask-size: 4.931rem 6.409rem;
+  -webkit-mask-image: var(--mask-view-list);
+  -webkit-mask-size: 4.931rem 6.409rem;
+}
+
+/* The artwork is 215x215 but its dots only cover the middle ~72x73.5 of it
+   (measured off the rendered SVG, filter spread included) — as one 210x210
+   box, most of the button was empty space that still took hover and clicks.
+   So the box is cut down to just the painted area and the mask is held at
+   its full size and offset back into place, leaving the icon exactly where
+   it was on screen with a hit area that matches what's visible. */
+.view-btn[data-view="field"] {
+  left: 167.686rem; /* 1608 + 68.86 */
+  top: 5.537rem; /* 1336 + 68.37 - 1349 */
+  width: 7.033rem;
+  height: 7.179rem;
+  mask-image: var(--mask-view-field);
+  mask-size: 21rem 21rem;
+  mask-position: -6.886rem -6.837rem;
+  -webkit-mask-image: var(--mask-view-field);
+  -webkit-mask-size: 21rem 21rem;
+  -webkit-mask-position: -6.886rem -6.837rem;
+}
+
+/* --- list view ---------------------------------------------------------- */
+
+.row {
+  position: relative;
+}
+
+/* collapsed pitch: artwork top to next artwork top = 317px */
+/* The gap below a row is the same whether it's open or shut: 127px from the
+   bottom of the row (its artwork when shut, its links when open) to the next
+   artwork's top. The board draws a wider gap under an expanded row, but one
+   constant gap keeps the rhythm of the list even. */
+.row + .row {
+  margin-top: 12.7rem; /* 317 - 190 */
+}
+
+.row-head {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  color: inherit;
+}
+
+/* artwork — Figma: 190x190 @ x=152 */
+.row-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 19rem;
+  height: 19rem;
+  margin-left: 15.2rem;
+}
+
+.row-art .art-shadow {
+  position: absolute;
+  inset: calc(var(--art-shadow-spread) * -1);
+  background: var(--art-shadow-color);
+  filter: blur(var(--art-shadow-blur));
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.row-art img {
+  /* above the shadow layer and the halo dots — both are positioned, so
+     without this the artwork (static) would paint under them */
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* halo — the ring of gold dots around the artwork, on the same 98px lattice
+   the canvas field uses. Dot geometry comes from app.js (HALO_DOTS). */
+.halo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+}
+
+.halo-dot {
+  position: absolute;
+  left: calc(var(--dx) * 1rem - var(--r) * 1rem);
+  top: calc(var(--dy) * 1rem - var(--r) * 1rem);
+  width: calc(var(--r) * 2rem);
+  height: calc(var(--r) * 2rem);
+  background: var(--tint, var(--gold));
+  mask-image: var(--blob);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--blob);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* title — Figma: x=440, ZCOOL KuaiLe 60px, centered on the artwork */
+.row-title {
+  margin-left: calc(44rem - 15.2rem - 19rem); /* 440 - 152 - 190 */
+  max-width: 84.5rem; /* Figma text box, so long titles break onto two lines */
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 6.3rem;
+  color: var(--cream);
+  transition: color 0.2s ease;
+}
+
+.row-head:hover .row-title {
+  color: color-mix(in oklch, var(--gold) 62%, var(--cream));
+  color: var(--hover);
+}
+
+/* --- expanded body ------------------------------------------------------- */
+
+.row-body[hidden] {
+  display: none;
+}
+
+/* The height is animated from app.js (see toggleRow) because `height: auto`
+   isn't a transitionable value and the panel has to come out of
+   `display: none`; only the fade is left to CSS, so the two don't drive the
+   same property from two places. Clipping while it moves. */
+.row-body {
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity var(--post-reveal) var(--ease);
+}
+
+.row.is-open .row-body {
+  opacity: 1;
+}
+
+/* Figma: description x=117 (so 35px left of the artwork), width 1049,
+   Tomorrow 36px, sitting 80px below the artwork. The 80px gap lives on the
+   text rather than on .row-body: as padding on the panel it would floor the
+   panel's animated height (a border-box can't be shorter than its own
+   padding), so the first stretch of the open would show no movement. */
+.row-body {
+  margin-left: 11.7rem;
+  width: 104.9rem;
+}
+
+.row-text {
+  padding-top: 8rem;
+}
+
+.row-text p {
+  margin: 0;
+  font-size: 3.6rem;
+  line-height: 4.3rem;
+}
+
+.row-text p + p {
+  margin-top: 4.3rem; /* the blank line between paragraphs in the design */
+}
+
+/* Figma: links y=2234, i.e. 64px under the description */
+.row-links {
+  display: flex;
+  align-items: baseline;
+  gap: 4.8rem;
+  padding-top: 6.4rem;
+}
+
+.row-links a {
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 6.3rem;
+  color: var(--cream);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.row-links a:hover {
+  color: color-mix(in oklch, var(--gold) 62%, var(--cream));
+  color: var(--hover);
+}
+
+/* --- field view --------------------------------------------------------- */
+
+.projects-field[hidden] {
+  display: none;
+}
+
+/* Starts 20px below the view buttons. Those sit at 1336 with a 210 box, so
+   their bottom is 1546 and the grid's first dot belongs at 1566 — 217 below
+   where .content already begins (1349). */
+.projects-field {
+  padding-top: 21.7rem;
+}
+
+/* Contacts has no view toggle over it, so the gap the projects field leaves
+   for those buttons is just empty air here — the grid comes up 300 to sit
+   under the menu instead of well below it. */
+[data-tab="contacts"] .projects-field {
+  margin-top: -30rem;
+}
+
+/* field.js measures this box and then sets its height to exactly what the
+   lattice needs — the grid never gets fewer than MIN_FIELD_ROWS rows, so the
+   box has no minimum of its own to impose. It used to carry one, and at 100
+   it was taller than the grid: that surplus was the empty strip under the
+   last row of circles. */
+.field-mount {
+  width: 100%;
+}
+
+/* ==========================================================================
+   all music — Figma frame 7:37528
+   The collapsed rows repeat the projects page exactly (artwork 190x190 at
+   x=152, first row at y=1349, 317 pitch, title at x=440), so switching tabs
+   doesn't move anything. What's new is the sub-nav above the list, the genre
+   tags, the per-project submenu, and the track rows.
+   ========================================================================== */
+
+/* sub-nav — Figma: soundtracks @ (139,1113), side projects @ x=1391,
+   ZCOOL KuaiLe 60px; the active one is gold, the other muted */
 .music-subnav {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
+  top: 92.2rem; /* 1113 - 191, in step with .content */
+  left: 0;
+  width: 100%;
+  height: 6.3rem;
 }
 
 .music-tab {
   position: absolute;
-  right: 80px;
-  color: var(--inactive);
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 100px;
-  font-weight: 400;
-  line-height: 0.82;
-  letter-spacing: 0;
-  text-align: right;
-  white-space: nowrap;
+  top: 0;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
   cursor: pointer;
-  pointer-events: auto;
-  transform: translate3d(0, -82px, 0);
-  transform-origin: right bottom;
-  will-change: color, font-size, transform;
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 6.3rem;
+  color: var(--muted);
   transition:
-    color 220ms ease,
-    font-size 780ms cubic-bezier(0.65, 0, 0.2, 1),
-    transform 780ms cubic-bezier(0.65, 0, 0.2, 1);
+    color 0.2s ease,
+    opacity var(--tab-fade) var(--ease);
 }
 
-.music-tab[data-music-tab="soundtracks"] {
-  top: 830px;
-  transform: translate3d(0, -106px, 0);
-}
-
-.music-tab[data-music-tab="own-music"] {
-  top: 896px;
+/* held while the words are swapped for the other view's pair */
+.music-tab.is-relabelling {
+  opacity: 0;
 }
 
 .music-tab.is-active {
-  color: var(--white);
-  font-size: 130px;
-  transform: translate3d(0, -107px, 0);
+  color: var(--gold);
 }
 
-.music-tab:hover:not(.is-active),
-.music-tab:focus-visible:not(.is-active) {
-  color: var(--inactive-hover);
+.music-tab:hover {
+  color: color-mix(in oklch, var(--gold) 62%, var(--cream));
+  color: var(--hover);
 }
 
-html.is-webkit .music-tab {
-  font-size: 100px;
-  transform: none;
-  transform-origin: right top;
-  will-change: color;
-  transition: color 220ms ease;
+/* Two slots, not two names: the words in them change with the view
+   (soundtracks/side projects, or genres/vibes) but the positions don't. */
+.music-tab[data-slot="a"] {
+  left: 13.9rem;
 }
 
-html.is-webkit .music-tab[data-music-tab="soundtracks"],
-html.is-webkit .music-tab[data-music-tab="soundtracks"].is-active {
-  top: 626px;
-  transform: none;
+/* right-aligned, not left: "side projects" and "vibes" are nothing like the
+   same width, and it's the right edge they share — 1764.4, where the longer
+   of the two ends */
+.music-tab[data-slot="b"] {
+  right: 15.556rem; /* 1920 - 1764.4 */
+  text-align: right;
 }
 
-html.is-webkit .music-tab[data-music-tab="own-music"],
-html.is-webkit .music-tab[data-music-tab="own-music"].is-active {
-  top: 692px;
-  transform: none;
+/* --- the all music view toggle ------------------------------------------ */
+
+/* Centred in the gap between the two sub-nav words and sitting on their
+   line. The pair is laid out as a row and centred as one, so the two glyphs
+   keep their spacing whatever their widths are. */
+.music-view-toggle {
+  position: absolute;
+  top: 92.2rem; /* the sub-nav's own line */
+  /* Centred in the gap the two words leave, not in the page: soundtracks ends
+     at 509.3 and side projects starts at 1391, so the middle is 950.15, and
+     the pair is 137.26 across (49.31 + 32 + 55.95). */
+  left: 88.152rem;
+  height: 6.3rem;
+  display: flex;
+  align-items: center;
+  gap: 3.2rem;
+  z-index: 2;
 }
 
-html.is-webkit .music-tab.is-active {
-  font-size: 100px;
+.music-view-toggle .view-btn {
+  position: relative;
+  flex: 0 0 auto;
 }
 
+/* Both icons are trimmed to the area they actually paint, so the hit target
+   matches the glyph instead of the whitespace around it. */
+.music-view-toggle .view-btn[data-view="all"] {
+  width: 4.931rem;
+  height: 6.409rem;
+  mask-image: var(--mask-view-list);
+  mask-size: 4.931rem 6.409rem;
+  -webkit-mask-image: var(--mask-view-list);
+  -webkit-mask-size: 4.931rem 6.409rem;
+}
+
+/* the drawn face is 55.95 x 55.21 of the 71 box, offset (7.36, 7.46) */
+.music-view-toggle .view-btn[data-view="tags"] {
+  width: 5.595rem;
+  height: 5.521rem;
+  mask-image: var(--mask-view-smile);
+  mask-size: 7.1rem 7.1rem;
+  mask-position: -0.736rem -0.746rem;
+  -webkit-mask-image: var(--mask-view-smile);
+  -webkit-mask-size: 7.1rem 7.1rem;
+  -webkit-mask-position: -0.736rem -0.746rem;
+}
+
+/* --- rows ---------------------------------------------------------------- */
+
+.music-row {
+  position: relative;
+}
+
+/* identical to the projects list: 317 between artworks, and the same gap
+   under an expanded row as under a collapsed one (its box ends at the last
+   track's bar, so this margin is the whole gap) */
+.music-row + .music-row {
+  margin-top: 12.7rem;
+}
+
+.music-head {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  color: inherit;
+}
+
+.music-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 19rem;
+  height: 19rem;
+  margin-left: 15.2rem;
+}
+
+/* four of the seven soundtracks have no artwork on the site, so the circle
+   falls back to a plain gold blob rather than an empty hole. The outline
+   itself is set in script, off the row's index, like the artwork's. */
+.music-art .music-art-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.music-art .art-shadow {
+  position: absolute;
+  inset: calc(var(--art-shadow-spread) * -1);
+  background: var(--art-shadow-color);
+  filter: blur(var(--art-shadow-blur));
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* While one of a project's own tracks is sounding, its cover turns exactly as
+   the logo's does — same 14s period, same direction — so the accordion says
+   what you're hearing the same way the header does. The blurred silhouette
+   behind it turns on the same clock, or it would peek out from under the
+   outline as that came round. */
+.music-art .music-art-spin {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.music-row.is-sounding .music-art .music-art-spin,
+.music-row.is-sounding .music-art .art-shadow {
+  animation: brand-spin 14s linear infinite;
+}
+
+.music-art img {
+  /* above the shadow layer and the halo dots — both are positioned, so
+     without this the artwork (static) would paint under them */
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.music-title-row {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  margin-left: 9.8rem; /* 440 - 152 - 190 */
+}
+
+.music-title {
+  max-width: 84.5rem;
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 6.3rem;
+  color: var(--cream);
+  transition: color 0.2s ease;
+}
+
+.music-head:hover .music-title {
+  color: color-mix(in oklch, var(--gold) 62%, var(--cream));
+  color: var(--hover);
+}
+
+/* what the old site marked "work in progress" — stays muted on hover too */
+.music-wip,
+.music-credit {
+  color: var(--muted);
+}
+
+/* the credit is a link, but a quiet one — it reads as part of the title, so
+   it inherits the title's face and only changes colour (not .music-note:
+   that name is already the blurb a category can carry) */
+a.music-credit {
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a.music-credit:hover {
+  color: var(--hover);
+}
+
+/* A separator left hanging at the end of a wrapped line. Hidden rather than
+   removed so the line breaks stay exactly where they are — see
+   trimStrandedSeparators. */
+.tag-sep.is-stranded {
+  visibility: hidden;
+}
+
+/* the ">" turns a full 180° between states, the way the old site's arrow
+   does: pointing up when shut, down when open */
+.music-chevron {
+  flex: 0 0 auto;
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 1;
+  color: var(--cream);
+  transform: rotate(-90deg);
+  transition: transform var(--accordion) var(--accordion-ease);
+}
+
+.music-row.is-open .music-chevron {
+  transform: rotate(90deg);
+}
+
+/* --- captions (tags above, submenu below) -------------------------------- */
+
+/* Both are placed against the halo's dot rows by app.js (see
+   placeCaptions): centred on the row of circles beside them when they run to
+   one line, aligned to those circles' top/bottom edge when they run to two. */
+.music-tags,
+.music-submenu {
+  position: absolute;
+  left: 44rem;
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 4rem;
+  line-height: 4rem;
+}
+
+.music-tags {
+  max-width: 76rem;
+  color: var(--muted);
+}
+
+/* A side project's line is a sentence about the record, not a genre list, so
+   it gets the room to stay on one. 100rem ends at x=1440, still clear of the
+   row's right edge; the longest of them (kylskap's) measures 964. */
+#musicSideProjects .music-tags {
+  max-width: 100rem;
+}
+
+/* Same reason on the title line: the side projects' names are all short, but
+   kylskap's credit runs with it and the pair measures 1172 against the 845
+   the soundtracks' long titles are broken at. 120rem ends at x=1640, still
+   inside the page. */
+#musicSideProjects .music-title {
+  max-width: 120rem;
+}
+
+.music-submenu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 3rem;
+  max-width: 79rem;
+}
+
+/* The submenu belongs to an open row only, and fades rather than blinking.
+   It stays in the DOM while shut — it's absolutely positioned, so it costs
+   no layout, and placeCaptions can still measure how many lines it runs to. */
+.music-row--accordion .music-submenu {
+  transition: opacity var(--accordion) var(--accordion-ease);
+}
+
+.music-row--accordion:not(.is-open) .music-submenu {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.music-cat {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: var(--muted);
+  transition: color 0.2s ease;
+}
+
+.music-cat.is-active {
+  color: var(--cream);
+}
+
+.music-cat:hover {
+  color: color-mix(in oklch, var(--gold) 62%, var(--cream));
+  color: var(--hover);
+}
+
+/* --- tracks -------------------------------------------------------------- */
+
+.music-tracks[hidden] {
+  display: none;
+}
+
+/* Figma: first track's title at y=1670, i.e. 321 below the row's top, and
+   the head above it is 190 tall */
+/* No clipping here: the play button and the slider are taller than the box
+   and must be free to hang out of it. (The height animation clips through
+   the wrapper instead, and only while it runs — see toggleMusicRow.) */
+.music-tracks {
+  padding-top: 13.1rem;
+}
+
+.music-track {
+  position: relative;
+  /* The box ends at the bar, and the gap to the next track is a margin
+     rather than padding: with border-box, padding would be counted inside
+     the height and swallow it (the row came out 111 tall instead of 200). */
+  height: 9.3rem; /* title line + the bar under it: 1763 - 1670 */
+  margin-bottom: 10.7rem; /* 200 pitch between tracks */
+}
+
+/* nothing after the last bar, so the row's box ends there and the 127 gap to
+   the next accordion row is exactly the row-to-row margin */
+.music-track:last-child {
+  margin-bottom: 0;
+}
+
+/* title and timecode share one line — Figma has them 5px apart, which is a
+   slip rather than an intent */
+.music-track-line {
+  position: absolute;
+  left: 11.7rem; /* 117 */
+  right: 14.2rem; /* 1920 - 1778 */
+  top: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4rem;
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 4rem;
+  line-height: 4rem;
+  color: var(--cream);
+}
+
+.music-track-detail {
+  color: var(--muted);
+}
+
+.music-track-time {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Play / stop: the top player's own icons, squeezed to 39x43, left edge in
+   line with the track titles at x=117 and centred on the bar's centreline.
+   They keep the same colour in both states. */
+.music-track-play {
+  position: absolute;
+  left: 11.7rem; /* 117 — the track titles' left edge */
+  top: 8.75rem; /* the bar's centreline: 82 + 11/2 */
+  width: 3.9rem;
+  height: 4.3rem;
+  margin-top: -2.15rem;
+  appearance: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: var(--cream);
+  mask-image: var(--mask-play);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--mask-play);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* The stop glyph is exported 67x82 against play's 66x74, so it takes the same
+   squeeze (x0.591, x0.581) rather than play's exact box — that keeps the two
+   icons in the proportion they have in the player above. */
+.music-track.is-playing .music-track-play {
+  width: 3.959rem;
+  height: 4.765rem;
+  margin-top: -2.3825rem;
+  mask-image: var(--mask-stop);
+  -webkit-mask-image: var(--mask-stop);
+}
+
+/* The bar: cream at rest, gold once its own track is playing, and in that
+   state it masks a cream fill that grows underneath it — the same
+   arrangement as the canvas player's progress bar. */
+/* The asset is 1601x14 and keeps that size: the painted rect inside it is
+   Figma's own 1598x11 at (180,1752), inset 1.3px by the noise filter's
+   bleed, so the box sits 1.3px up and to the left of it. */
+.music-track-bar {
+  position: absolute;
+  left: 17.87rem; /* 180 - 1.3 */
+  top: 8.07rem; /* (1752 - 1670) - 1.3 */
+  width: 160.1rem;
+  height: 1.4rem;
+  cursor: pointer;
+  background: var(--cream);
+  mask-image: var(--mask-bar);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--mask-bar);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  transition: background-color var(--post-reveal) var(--ease);
+}
+
+.music-track.is-playing .music-track-bar {
+  background: var(--tint, var(--gold));
+}
+
+.music-track-fill {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: var(--cream);
+}
+
+/* the slider only turns up once the bar has finished recolouring, exactly
+   like the thumb on the player above */
+.music-track-thumb {
+  position: absolute;
+  top: 8.75rem; /* the bar's centreline */
+  width: 3.5rem;
+  height: 3.7rem;
+  margin-top: -1.85rem;
+  margin-left: -1.75rem;
+  background: var(--cream);
+  mask-image: var(--mask-thumb);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--mask-thumb);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    opacity var(--post-reveal) var(--ease) 0s,
+    transform var(--post-reveal) var(--ease) 0s;
+}
+
+.music-track.is-playing .music-track-thumb {
+  opacity: 1;
+  transform: scale(1);
+  transition-delay: var(--post-reveal);
+}
+
+/* A track whose file isn't in yet: the row is there so the list has its
+   shape, but it reads as unavailable and nothing responds to a press. */
+.music-track.is-pending {
+  opacity: 0.45;
+}
+
+.music-track.is-pending .music-track-play,
+.music-track.is-pending .music-track-bar {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* a category that carries a blurb instead of tracks */
+.music-note {
+  position: relative;
+  left: 11.7rem;
+  max-width: 140rem;
+  font-family: "Tomorrow", system-ui, sans-serif;
+  font-size: 3.6rem;
+  line-height: 4.3rem;
+  color: var(--cream);
+}
+
+.music-note a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.music-note a:hover {
+  color: var(--cream);
+}
+
+/* --- genres and vibes ---------------------------------------------------- */
+
+/* A word ringed by eight dots. The ring is the same one the artworks wear,
+   with one difference: the two dots on the word's own line are pushed out to
+   clear it, so the word parts them instead of sitting on top of them. How
+   far is measured in placeTagRings — a long word pushes them further. */
+.tag-ring {
+  position: absolute;
+  /* --x/--y are written every frame by the drift, so this is a live position
+     rather than a placed one — no transition on it, or the ring would lag a
+     frame behind itself */
+  left: calc(var(--x) * 1rem);
+  top: calc(var(--y) * 1rem);
+  width: 0;
+  height: 0;
+}
+
+.tag-ring .tag-name {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 4rem;
+  line-height: 4rem;
+  color: var(--cream);
+  background: none;
+  border: 0;
+  padding: 0;
+  appearance: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  /* the ring is a zero-size anchor, so this is the only thing to aim at */
+  z-index: 1;
+}
+
+/* hovering lifts it the same way everything else on the page lifts — the
+   accent is kept for the tag that's actually playing */
+.tag-ring .tag-name:hover,
+.tag-ring .tag-name:focus-visible {
+  color: var(--hover);
+}
+
+.tag-ring .tag-name:focus-visible {
+  outline: none;
+}
+
+.tag-ring.is-playing .tag-name {
+  color: var(--gold);
+}
+
+/* the mount is a plain box the rings are absolutely placed inside */
+.music-tagfield {
+  position: relative;
+  width: 100%;
+}
+
+/* --- side projects ------------------------------------------------------- */
+
+/* They're built exactly like the soundtracks now (buildMusicRow), so all
+   they need of their own is for a put-away panel to stay put away. */
 .music-panel[hidden] {
   display: none;
 }
 
-.music-panel {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 520ms ease;
-}
+/* ==========================================================================
+   feed — Figma frame 7:64509
 
-.music-panel.is-active {
-  opacity: 1;
-  pointer-events: auto;
-}
+   Measured off the board's own render rather than its node boxes, which
+   disagree with each other from post to post: the text column sits at x=139
+   like the menu, the dot column at x=48, and the right-hand cluster starts at
+   x=1164 on the same 97.85 lattice the rest of the site uses. The image
+   circle is exactly 5 cells across, centred on the cluster; the cluster and
+   the dot column are both centred on the post's own height.
+   ========================================================================== */
 
-.soundtrack-list {
-  position: absolute;
-  top: 896px;
-  left: 72px;
-  display: grid;
-  gap: 130px;
-}
-
-.own-music-list {
-  position: absolute;
-  top: 896px;
-  left: 72px;
-  display: grid;
-  gap: 90px;
-  width: 1768px;
-}
-
-html.is-chromium .soundtrack-list,
-html.is-chromium .own-music-list {
-  top: 996px;
-}
-
-.own-music-item {
+/* The board starts the first post 65 above where every other section's
+   content begins (1284 against the shared 1349) — the other sections open
+   with a 190 artwork whose title is centred on it, and a post has no artwork
+   on that side to be centred against. */
+.feed {
   position: relative;
+  margin-top: -6.5rem;
 }
 
-.own-music-copy {
-  display: grid;
-  justify-items: start;
-}
-
-.own-music-title,
-.own-music-description,
-.own-music-link {
-  margin: 0;
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-
-.own-music-title {
-  color: var(--white);
-  font-size: 140px;
-  line-height: 0.82;
-}
-
-.own-music-description {
-  display: grid;
-  margin-top: 18px;
-  color: var(--white);
-  font-size: 40px;
-  line-height: 42px;
-}
-
-.own-music-description p {
-  margin: 0;
-}
-
-.own-music-collab {
-  color: #919191;
-  text-decoration: none;
-  transition: color 220ms ease;
-}
-
-.own-music-collab:hover,
-.own-music-collab:focus-visible {
-  color: #c6c6c6;
-}
-
-.own-music-link {
-  margin-top: 18px;
-  color: var(--own-music-link);
-  font-size: 100px;
-  line-height: 0.82;
-  text-decoration: none;
-  transition: color 220ms ease;
-}
-
-.own-music-link:hover,
-.own-music-link:focus-visible {
-  color: #8b001e;
-}
-
-.own-music-cover {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  width: 350px;
-  height: 350px;
-  display: block;
-  object-fit: cover;
-  image-rendering: pixelated;
-  transform: translateY(-50%);
-  user-select: none;
-}
-
-.contact-content {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  color: var(--white);
-  font-family: "Jersey 25", system-ui, sans-serif;
-}
-
-.contact-list {
-  position: absolute;
-  top: 920px;
-  left: 72px;
-  display: grid;
-  justify-items: start;
-}
-
-html.is-chromium .contact-list {
-  top: 1020px;
-}
-
-.contact-primary,
-.contact-social-links {
-  display: grid;
-  justify-items: start;
-}
-
-.contact-line,
-.contact-social-heading,
-.contact-link {
-  margin: 0;
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-weight: 400;
-  line-height: 0.82;
-  letter-spacing: 0;
-}
-
-.contact-line,
-.contact-link {
-  color: var(--white);
-  font-size: 100px;
-}
-
-.contact-label--discord {
-  color: #7751be;
-}
-
-.contact-label--telegram {
-  color: #31a0fb;
-}
-
-.contact-label--email {
-  color: #ffa352;
-}
-
-.contact-social {
-  margin-top: 100px;
-}
-
-.contact-social-heading {
-  margin-bottom: 10px;
-  color: #919191;
-  font-size: 65px;
-}
-
-.contact-link {
-  text-decoration: none;
-  transition: color 220ms ease;
-}
-
-.contact-link--youtube {
-  color: #f30035;
-}
-
-.contact-link--youtube:hover,
-.contact-link--youtube:focus-visible {
-  color: #f9436a;
-}
-
-.contact-link--telegram {
-  color: #31a0fb;
-}
-
-.contact-link--telegram:hover,
-.contact-link--telegram:focus-visible {
-  color: #63b9ff;
-}
-
-.contact-link--tiktok {
-  color: #7751be;
-}
-
-.contact-link--tiktok:hover,
-.contact-link--tiktok:focus-visible {
-  color: #9278c3;
-}
-
-.soundtrack-item {
-  display: grid;
-  gap: 3px;
-}
-
-.soundtrack-description {
-  margin: 0;
-  color: #c6c6c6;
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 60px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0;
-  white-space: nowrap;
-}
-
-.soundtrack-toggle {
+/* The dot column is the post's rectangle: its first dot's top edge is the
+   title's top line and its last dot's bottom edge is the bottom link's, so
+   every box is the height of the cluster on the right, which is the same for
+   a two-line post and a ten-line one — so the posts sit on a constant pitch
+   and the big circles keep an even rhythm down the page. The copy and its
+   dot column are their own, shorter rectangle, centred inside that (see
+   layoutFeedPost). */
+.feed-post {
+  position: relative;
   display: flex;
-  align-items: flex-end;
-  justify-content: flex-start;
-  color: var(--white);
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 140px;
-  font-weight: 400;
-  line-height: 100px;
-  letter-spacing: 0;
-  text-align: left;
-  cursor: pointer;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: 13.9rem; /* the text column, x=139 */
+  padding-right: 76.1rem; /* clear of the cluster: 1920 - 1164 + 5 */
 }
 
-.soundtrack-title {
-  display: block;
-  line-height: 100px;
+/* two lattice cells — the board's own pitch between clusters is this plus
+   their height (819/820 apart on the frame) */
+.feed-post + .feed-post {
+  margin-top: 19.57rem;
 }
 
-.soundtrack-title--fictional {
-  display: grid;
-}
-
-.soundtrack-arrow {
-  display: block;
-  width: 70px;
-  height: 70px;
-  flex: 0 0 70px;
-  margin-left: 20px;
-  image-rendering: pixelated;
-  transform: translateY(-3px) rotate(180deg);
-  transform-origin: center;
-  transition: transform 420ms ease;
-}
-
-.soundtrack-item.is-open .soundtrack-arrow {
-  transform: translateY(-3px) rotate(360deg);
-}
-
-.soundtrack-body {
-  width: 1810px;
-  height: 0;
-  overflow: hidden;
-  transition: height 420ms ease;
-}
-
-.soundtrack-body[hidden] {
-  display: none;
-}
-
-.soundtrack-player {
-  padding-top: 10px;
-}
-
-.player-categories {
+.feed-body {
   display: flex;
+  flex-direction: column;
+  flex: 0 0 auto; /* app.js gives it the column's height */
+}
+
+/* the body sits exactly midway between the date and the links */
+.feed-middle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+}
+
+.feed-title {
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 6.3rem;
+  color: var(--cream);
+}
+
+/* +68 from the title's top, so 5 under its line box */
+.feed-date {
+  margin-top: 0.5rem;
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 4rem;
+  line-height: 6.3rem;
+  color: var(--muted);
+}
+
+/* +186 from the title's top */
+.feed-text {
+  max-width: 91.5rem;
+  font-family: "Tomorrow", system-ui, sans-serif;
+  font-size: 3.6rem;
+  line-height: 5.1rem;
+  color: var(--cream);
+  white-space: pre-line;
+}
+
+.feed-links {
+  display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 30px;
 }
 
-.player-category {
-  color: #c6c6c6;
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 40px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0;
-  cursor: pointer;
-  transition: color 220ms ease;
-}
-
-.player-category.is-active {
-  color: var(--white);
-}
-
-.player-category:hover:not(.is-active),
-.player-category:focus-visible:not(.is-active) {
-  color: #949494;
-}
-
-.player-track-list {
-  display: grid;
-  margin-top: 116px;
-}
-
-.player-track-list[hidden] {
-  display: none;
-}
-
-.player-note {
-  margin: -35px 0 0;
-  color: #c6c6c6;
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 140px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-.player-note--compact {
-  margin-top: -25px;
-  font-size: 110px;
-}
-
-.player-text-block {
-  display: grid;
-}
-
-.player-text {
-  width: 1740px;
-  margin: 0;
-  color: var(--white);
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 60px;
-  font-weight: 400;
-  line-height: 72px;
-  letter-spacing: 0;
-}
-
-.player-text-link {
-  justify-self: start;
-  margin-top: 116px;
-  color: var(--white);
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 100px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0;
+.feed-links a {
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 5rem;
+  color: var(--cream);
   text-decoration: none;
-  transition: color 220ms ease;
+  transition: color 0.2s ease;
 }
 
-.player-text-link:hover,
-.player-text-link:focus-visible {
-  color: #c6c6c6;
+.feed-links a:hover {
+  color: color-mix(in oklch, var(--gold) 62%, var(--cream));
+  color: var(--hover);
 }
 
-.audio-track + .audio-track {
-  margin-top: 60px;
-}
+/* --- the decoration ------------------------------------------------------ */
 
-.audio-track-title {
-  margin: 0;
-  color: var(--white);
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 40px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-.audio-track-detail {
-  color: #c6c6c6;
-}
-
-.audio-track-controls {
-  display: grid;
-  grid-template-columns: 32px 1436px 250px;
-  align-items: center;
-  column-gap: 20px;
-  margin-top: 10px;
-}
-
-.track-play {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  image-rendering: pixelated;
-  cursor: pointer;
-}
-
-.track-play-icon {
-  display: block;
-  width: 32px;
-  height: 32px;
-  image-rendering: pixelated;
-}
-
-.track-play-icon--stop {
-  display: none;
-}
-
-.audio-track.is-playing .track-play-icon--play,
-.audio-track.is-play-pending .track-play-icon--play {
-  display: none;
-}
-
-.audio-track.is-playing .track-play-icon--stop,
-.audio-track.is-play-pending .track-play-icon--stop {
-  display: block;
-}
-
-.track-loading-icon {
-  display: none;
-  width: 32px;
-  height: 32px;
-  image-rendering: pixelated;
-}
-
-.audio-track.is-loading .track-play-icon {
-  display: none;
-}
-
-.audio-track.is-loading .track-loading-icon {
-  display: block;
-}
-
-.track-progress {
-  position: relative;
-  width: 1436px;
-  height: 30px;
-  cursor: pointer;
-}
-
-.track-progress-bar {
+/* Both clusters hang off the post box and are centred on its height. They're
+   zero-size anchors, like .halo — each dot is placed from its own lattice
+   offset, so app.js can measure and animate them exactly as it does the
+   project halos. */
+.feed-dots,
+.feed-art {
   position: absolute;
   top: 50%;
-  left: 0;
-  width: 1436px;
-  height: 8px;
-  background: #c6c6c6;
-  transform: translateY(-50%);
-}
-
-.track-progress-fill {
-  position: absolute;
-  top: 50%;
-  left: 0;
   width: 0;
-  height: 8px;
-  background: var(--white);
-  opacity: 0;
-  transform: translateY(-50%);
+  height: 0;
 }
 
-.track-progress-thumb {
+.feed-dots {
+  left: 4.8rem; /* the column's centre, x=48 */
+}
+
+.feed-art {
+  left: 145.755rem; /* the image circle's centre: 1164 + 3 x 97.85 */
+}
+
+.feed-dot {
   position: absolute;
-  top: 50%;
-  left: 0;
-  width: 10px;
-  height: 30px;
-  background: var(--white);
-  opacity: 0;
-  transform: translate(-5px, -50%);
+  left: calc(var(--dx) * 1rem - var(--r) * 1rem);
+  top: calc(var(--dy) * 1rem - var(--r) * 1rem);
+  width: calc(var(--r) * 2rem);
+  height: calc(var(--r) * 2rem);
+  background: var(--tint, var(--gold));
+  mask-image: var(--blob);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--blob);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
 }
 
-.audio-track.is-playing .track-progress-fill,
-.audio-track.is-playing .track-progress-thumb,
-.audio-track.has-progress .track-progress-fill,
-.audio-track.has-progress .track-progress-thumb {
-  opacity: 1;
-}
-
-.track-time {
-  margin-left: 10px;
-  color: var(--white);
-  font-family: "Jersey 25", system-ui, sans-serif;
-  font-size: 40px;
-  line-height: 1;
-  letter-spacing: 0;
-  white-space: nowrap;
-}
-
-.audio-native {
-  display: none;
-}
-
-.mini-player {
-  --mini-bg: var(--red);
-  --mini-text: var(--white);
-  --mini-muted: #c6c6c6;
-  --mini-bar: #c6c6c6;
-  --mini-accent: var(--white);
-  --mini-shuffle-passive: #c6c6c6;
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  z-index: 80;
-  width: 1920px;
-  height: 130px;
-  color: var(--mini-text);
-  background: var(--mini-bg);
-  font-family: "Jersey 25", system-ui, sans-serif;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%) scale(var(--site-scale));
-  transform-origin: bottom center;
-  transition:
-    opacity 220ms ease,
-    color 220ms ease,
-    background-color 650ms ease;
-}
-
-body.theme-all-music .mini-player,
-body.theme-contact .mini-player {
-  --mini-bg: var(--white);
-  --mini-text: var(--red);
-  --mini-muted: #696969;
-  --mini-bar: #919191;
-  --mini-accent: var(--red);
-  --mini-shuffle-passive: #696969;
-  --mini-play-icon: url("./assets/icons/bf032c/play.webp");
-  --mini-stop-icon: url("./assets/icons/bf032c/stop.webp");
-  --mini-loading-icon: url("./assets/icons/bf032c/loading.gif");
-  --mini-shuffle-passive-icon: url("./assets/icons/696969/shuffle-passive.webp");
-  --mini-shuffle-active-icon: url("./assets/icons/bf032c/shuffle-active.webp");
-  --mini-prev-icon: url("./assets/icons/bf032c/prev.webp");
-  --mini-next-icon: url("./assets/icons/bf032c/next.webp");
-}
-
-.mini-player.is-visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.mini-track-title,
-.mini-track-source,
-.mini-time {
+/* the image slot: 5 lattice cells across, on the cluster's centre */
+.feed-image {
   position: absolute;
-  margin: 0;
-  font-size: 40px;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0;
-  white-space: nowrap;
+  left: -24.4625rem;
+  top: -24.4625rem;
+  width: 48.925rem;
+  height: 48.925rem;
 }
 
-.mini-track-title {
-  top: 19px;
-  left: 34px;
-  max-width: 1500px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mini-track-detail {
-  color: var(--mini-muted);
-}
-
-.mini-track-source {
-  top: 19px;
-  right: 34px;
-  color: var(--mini-muted);
-}
-
-.mini-controls {
+.feed-image .art-shadow {
   position: absolute;
-  bottom: 21px;
-  left: 34px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  inset: calc(var(--art-shadow-spread) * -1);
+  background: var(--art-shadow-color);
+  filter: blur(var(--art-shadow-blur));
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
 }
 
-.mini-control {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  color: var(--mini-accent);
-  cursor: pointer;
-}
-
-.mini-control-image,
-.mini-play-icon {
-  display: block;
-  width: 32px;
-  height: 32px;
-  image-rendering: pixelated;
-}
-
-.mini-control--shuffle .mini-control-image {
-  content: var(--mini-shuffle-passive-icon, url("./assets/icons/c6c6c6/shuffle-passive.webp"));
-}
-
-.mini-player.is-shuffled .mini-control--shuffle .mini-control-image,
-.mini-control--shuffle:hover .mini-control-image,
-.mini-control--shuffle:focus-visible .mini-control-image,
-body.theme-all-music .mini-player.is-shuffled .mini-control--shuffle .mini-control-image,
-body.theme-all-music .mini-control--shuffle:hover .mini-control-image,
-body.theme-all-music .mini-control--shuffle:focus-visible .mini-control-image,
-body.theme-contact .mini-player.is-shuffled .mini-control--shuffle .mini-control-image,
-body.theme-contact .mini-control--shuffle:hover .mini-control-image,
-body.theme-contact .mini-control--shuffle:focus-visible .mini-control-image {
-  content: var(--mini-shuffle-active-icon, url("./assets/icons/ffffff/shuffle-active.webp"));
-}
-
-.mini-control--shuffle {
-  opacity: 1;
-  transition: opacity 220ms ease;
-}
-
-.mini-player.is-shuffled .mini-control--shuffle,
-.mini-control--shuffle:hover,
-.mini-control--shuffle:focus-visible {
-  opacity: 1;
-}
-
-.mini-skip-icon {
+.feed-image img,
+.feed-image .feed-image-empty {
   position: relative;
+  z-index: 1;
   display: block;
-  width: 32px;
-  height: 32px;
-  image-rendering: pixelated;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
 }
 
-.mini-skip-icon::before,
-.mini-skip-icon::after {
-  display: none;
-}
-
-.mini-skip-icon--previous {
-  content: var(--mini-prev-icon, url("./assets/icons/ffffff/prev.webp"));
-}
-
-.mini-skip-icon--next {
-  content: var(--mini-next-icon, url("./assets/icons/ffffff/next.webp"));
-}
-
-.mini-play-icon--stop,
-.mini-play-icon--loading {
-  display: none;
-}
-
-.mini-play-icon--play {
-  content: var(--mini-play-icon, url("./assets/icons/ffffff/play.webp"));
-}
-
-.mini-play-icon--stop {
-  content: var(--mini-stop-icon, url("./assets/icons/ffffff/stop.webp"));
-}
-
-.mini-play-icon--loading {
-  content: var(--mini-loading-icon, url("./assets/icons/ffffff/loading.gif"));
-}
-
-.mini-player.is-playing .mini-play-icon--play {
-  display: none;
-}
-
-.mini-player.is-playing .mini-play-icon--stop {
-  display: block;
-}
-
-.mini-player.is-loading .mini-play-icon {
-  display: none;
-}
-
-.mini-player.is-loading .mini-play-icon--loading {
-  display: block;
-}
-
-.mini-progress {
-  position: absolute;
-  bottom: 22px;
-  left: 229px;
-  width: 1418px;
-  height: 30px;
-  cursor: pointer;
-}
-
-.mini-progress-bar,
-.mini-progress-fill {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  height: 8px;
-  transform: translateY(-50%);
-}
-
-.mini-progress-bar {
-  width: 1418px;
-  background: var(--mini-bar);
-}
-
-.mini-progress-fill {
-  width: 0;
-  background: var(--mini-accent);
-}
-
-.mini-progress-thumb {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 10px;
-  height: 30px;
-  background: var(--mini-accent);
-  transform: translate(-5px, -50%);
-}
-
-.mini-time {
-  bottom: 18px;
-  left: 1681px;
-  color: var(--mini-text);
-}
-
-@media (max-width: 767px) {
-  .title-nav {
-    width: 1770px;
-    height: 520px;
-    pointer-events: none;
-  }
-
-  .title-link,
-  .title-link.is-active,
-  html.is-webkit .title-link,
-  html.is-webkit .title-link.is-active {
-    height: 148px;
-    font-size: 180px;
-    line-height: 0.82;
-    transform-origin: left top;
-    pointer-events: auto;
-    will-change: color;
-    transition: color 220ms ease;
-  }
-
-  .title-link[data-section="projects"],
-  .title-link[data-section="projects"].is-active,
-  html.is-webkit .title-link[data-section="projects"],
-  html.is-webkit .title-link[data-section="projects"].is-active {
-    transform: translate3d(0, 0, 0);
-  }
-
-  .title-link[data-section="all-music"],
-  .title-link[data-section="all-music"].is-active,
-  body[data-active-section="all-music"] .title-link[data-section="all-music"],
-  body[data-active-section="contact"] .title-link[data-section="all-music"],
-  html.is-webkit .title-link[data-section="all-music"],
-  html.is-webkit .title-link[data-section="all-music"].is-active,
-  html.is-webkit body[data-active-section="all-music"] .title-link[data-section="all-music"],
-  html.is-webkit body[data-active-section="contact"] .title-link[data-section="all-music"] {
-    transform: translate3d(0, 150px, 0);
-  }
-
-  .title-link[data-section="contact"],
-  .title-link[data-section="contact"].is-active,
-  body[data-active-section="contact"] .title-link[data-section="contact"],
-  html.is-webkit .title-link[data-section="contact"],
-  html.is-webkit .title-link[data-section="contact"].is-active,
-  html.is-webkit body[data-active-section="contact"] .title-link[data-section="contact"] {
-    transform: translate3d(0, 270px, 0);
-  }
-
-  .music-tab,
-  .music-tab.is-active,
-  html.is-webkit .music-tab,
-  html.is-webkit .music-tab.is-active {
-    height: 148px;
-    font-size: 180px;
-    line-height: 0.82;
-    transform: none;
-    transform-origin: right top;
-    will-change: color;
-    transition: color 220ms ease;
-  }
-
-  .music-tab[data-music-tab="soundtracks"],
-  .music-tab[data-music-tab="soundtracks"].is-active,
-  html.is-webkit .music-tab[data-music-tab="soundtracks"],
-  html.is-webkit .music-tab[data-music-tab="soundtracks"].is-active {
-    top: 710px;
-    transform: none;
-  }
-
-  .music-tab[data-music-tab="own-music"],
-  .music-tab[data-music-tab="own-music"].is-active,
-  html.is-webkit .music-tab[data-music-tab="own-music"],
-  html.is-webkit .music-tab[data-music-tab="own-music"].is-active {
-    top: 830px;
-    transform: none;
-  }
-
-  .soundtrack-list,
-  .own-music-list {
-    top: 1096px;
-  }
-
-  html.is-chromium .soundtrack-list,
-  html.is-chromium .own-music-list {
-    top: 1196px;
-  }
-
-  .project-copy--kletka {
-    top: 1080px;
-  }
-
-  .contact-list {
-    top: 1120px;
-  }
-
-  html.is-chromium .contact-list {
-    top: 1220px;
-  }
-
-  .theme-contact .stage {
-    min-height: 2030px;
-  }
-
-  html.is-chromium .theme-contact .stage {
-    min-height: 2130px;
-  }
-
-  .mini-player {
-    height: 360px;
-  }
-
-  .mini-track-title,
-  .mini-track-source,
-  .mini-time {
-    line-height: 1;
-  }
-
-  .mini-track-title {
-    top: 35px;
-    left: 60px;
-    max-width: 1800px;
-    font-size: 65px;
-  }
-
-  .mini-track-source {
-    top: 100px;
-    right: auto;
-    left: 60px;
-    max-width: 1800px;
-    overflow: hidden;
-    color: var(--mini-muted);
-    font-size: 60px;
-    text-overflow: ellipsis;
-  }
-
-  .mini-progress {
-    top: 184px;
-    bottom: auto;
-    left: 60px;
-    width: 1800px;
-    height: 40px;
-  }
-
-  .mini-progress-bar,
-  .mini-progress-fill {
-    height: 10px;
-  }
-
-  .mini-progress-bar {
-    width: 1800px;
-  }
-
-  .mini-progress-thumb {
-    width: 10px;
-    height: 40px;
-    transform: translate(-5px, -50%);
-  }
-
-  .mini-controls {
-    inset: 0;
-    display: block;
-  }
-
-  .mini-control {
-    position: absolute;
-    top: 258px;
-    width: 68px;
-    height: 68px;
-  }
-
-  .mini-control-image,
-  .mini-play-icon,
-  .mini-skip-icon {
-    width: 68px;
-    height: 68px;
-  }
-
-  .mini-skip-icon {
-    object-fit: contain;
-  }
-
-  .mini-control--shuffle {
-    left: 60px;
-  }
-
-  .mini-control--previous {
-    left: calc(50% - 162px);
-  }
-
-  .mini-control--toggle {
-    left: calc(50% - 34px);
-  }
-
-  .mini-control--next {
-    left: calc(50% + 94px);
-  }
-
-  .mini-time {
-    top: 267px;
-    right: 60px;
-    bottom: auto;
-    left: auto;
-    color: var(--mini-text);
-    font-size: 50px;
-  }
+/* a post with no picture yet keeps the board's plain gold circle */
+.feed-image .feed-image-empty {
+  background: var(--gold);
 }

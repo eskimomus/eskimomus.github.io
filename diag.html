@@ -62,10 +62,10 @@
         margin-bottom: 6px;
       }
       .swatch.svg {
-        mask-image: url("../assets/circle-blob.svg");
+        mask-image: url("./assets/circle-blob.svg");
         mask-size: 100% 100%;
         mask-repeat: no-repeat;
-        -webkit-mask-image: url("../assets/circle-blob.svg");
+        -webkit-mask-image: url("./assets/circle-blob.svg");
         -webkit-mask-size: 100% 100%;
         -webkit-mask-repeat: no-repeat;
       }
@@ -145,14 +145,14 @@
         let canvas = null;
         try {
           const img = new Image();
-          img.src = "../assets/circle-blob.svg";
+          img.src = "./assets/circle-blob.svg";
           await img.decode();
           naive = document.createElement("canvas");
           naive.width = 512;
           naive.height = 512;
           naive.getContext("2d").drawImage(img, 0, 0, 512, 512);
 
-          const text = await fetch("../assets/circle-blob.svg").then((r) => r.text());
+          const text = await fetch("./assets/circle-blob.svg").then((r) => r.text());
           const sized = text.replace('width="66"', 'width="512"').replace('height="66"', 'height="512"');
           const big = new Image();
           big.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(sized)));
@@ -245,7 +245,7 @@
         };
 
         const svgImage = new Image();
-        svgImage.src = "../assets/circle-blob.svg";
+        svgImage.src = "./assets/circle-blob.svg";
         await svgImage.decode();
         await showPixels("1 · SVG drawn straight at that size", (c, size) => {
           c.drawImage(svgImage, 0, 0, size, size);
