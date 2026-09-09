@@ -231,7 +231,14 @@ html {
   z-index: 9999;
   background: var(--bg);
   pointer-events: auto;
-  animation: preloader-exit 1000ms cubic-bezier(0.76, 0, 0.24, 1) 200ms forwards;
+}
+
+/* It leaves when the page is actually ready, not on a timer — see
+   whenPageReady in app.js. On a timer it uncovered the page mid-build, and
+   the menu, then the logo, then the circles and the rows arrived one after
+   another in full view. */
+.page-preloader.is-leaving {
+  animation: preloader-exit 1000ms cubic-bezier(0.76, 0, 0.24, 1) forwards;
 }
 
 .page-preloader.is-hidden {

@@ -511,6 +511,20 @@ const RATE_GLIDE = 0.03;
 // duck room — see the currentTime setter.
 const SEEK_SETTLE_MS = 25;
 
+// How much of a track has to have arrived before it starts playing. An mp3 is
+// a plain run of frames, so a prefix of the bytes decodes to exactly that
+// prefix of the music — measured in both browsers, 30% of the file gives 30%
+// of the track to within a tenth of a second. The rest keeps downloading
+// underneath and is handed over to seamlessly when it lands.
+const PROGRESSIVE_AT = 0.3;
+// Below this a file is small enough that waiting for all of it costs nothing,
+// and a prefix of it may be too short to decode at all.
+const PROGRESSIVE_MIN_BYTES = 512 * 1024;
+// How far ahead the handover from prefix to whole is scheduled — long enough
+// for the audio thread to have both sources ready, short enough to be no
+// delay at all.
+const HANDOVER_LEAD = 0.05;
+
 function makeDeck() {
   const listeners = new Map();
   let src = null;
@@ -523,6 +537,12 @@ function makeDeck() {
   let loadToken = 0;
   let loading = false;
   let loaded = 0; // 0..1 of the track being fetched, for the progress readout
+  let partial = false; // playing a prefix while the rest is still arriving
+  // What the whole track runs to, told to us rather than guessed. It cannot be
+  // worked out from the prefix: these files are variable-bitrate, so a share of
+  // the bytes is not the same share of the time — measured, 30% of one file
+  // decoded to 15% of its music. The library already stores every duration.
+  let expected = 0;
   let ended = false;
   let stopping = false; // a stop we asked for, so onended isn't the track ending
   let seekingUntil = 0;
@@ -594,7 +614,14 @@ function makeDeck() {
   // Read through the body rather than taking it in one piece, so how much has
   // arrived can be reported while it arrives. Only the track being played asks
   // for that; a prefetch passes no reporter and takes the simple path.
-  const fetchAndDecode = async (url, onProgress) => {
+  // Safari only reliably takes the callback form of decodeAudioData.
+  const decodeBytes = (bytes) =>
+    new Promise((resolve, reject) => {
+      const maybe = audioCtx.decodeAudioData(bytes, resolve, reject);
+      if (maybe && maybe.then) maybe.then(resolve, reject);
+    });
+
+  const fetchAndDecode = async (url, onProgress, onEnough) => {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const total = Number(response.headers.get("content-length")) || 0;
@@ -606,29 +633,37 @@ function makeDeck() {
       const reader = response.body.getReader();
       const chunks = [];
       let received = 0;
+      let offered = false;
+      const join = () => {
+        const joined = new Uint8Array(received);
+        let at = 0;
+        for (const chunk of chunks) {
+          joined.set(chunk, at);
+          at += chunk.length;
+        }
+        return joined;
+      };
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         chunks.push(value);
         received += value.length;
-        onProgress(Math.min(1, received / total));
+        const fraction = Math.min(1, received / total);
+        onProgress(fraction);
+        // Offered once, as soon as there is enough of it — and on a copy,
+        // because decodeAudioData takes the buffer away from us and the rest
+        // of the file still has to be assembled from these same chunks.
+        if (onEnough && !offered && fraction >= PROGRESSIVE_AT && total >= PROGRESSIVE_MIN_BYTES) {
+          offered = true;
+          await onEnough(join().buffer, fraction);
+        }
       }
-      const joined = new Uint8Array(received);
-      let at = 0;
-      for (const chunk of chunks) {
-        joined.set(chunk, at);
-        at += chunk.length;
-      }
-      bytes = joined.buffer;
+      bytes = join().buffer;
     } else {
       bytes = await response.arrayBuffer();
       if (onProgress) onProgress(1);
     }
-    // Safari only reliably takes the callback form of decodeAudioData
-    return new Promise((resolve, reject) => {
-      const maybe = audioCtx.decodeAudioData(bytes, resolve, reject);
-      if (maybe && maybe.then) maybe.then(resolve, reject);
-    });
+    return decodeBytes(bytes);
   };
 
   const load = async (url) => {
@@ -651,29 +686,99 @@ function makeDeck() {
     loading = true;
     loaded = 0;
     buffer = null;
+    partial = false;
     deck.dispatch("loadstart");
     try {
-      const audio = await fetchAndDecode(url, (fraction) => {
-        // a newer track was asked for meanwhile — its own load owns the readout
-        if (token === loadToken) loaded = fraction;
-      });
+      const audio = await fetchAndDecode(
+        url,
+        (fraction) => {
+          // a newer track was asked for meanwhile — its own load owns the readout
+          if (token === loadToken) loaded = fraction;
+        },
+        // Enough has arrived to start on: an mp3 is a plain run of frames, so
+        // a prefix of the bytes decodes to exactly that prefix of the music —
+        // measured, 30% of the file gives 30% of the track, to a tenth of a
+        // second. Playing begins there and the rest keeps coming.
+        async (prefix) => {
+          if (token !== loadToken || buffer || !running) return;
+          let head;
+          try {
+            head = await decodeBytes(prefix);
+          } catch {
+            return; // not enough to make sense of yet; the next chunk will try
+          }
+          if (token !== loadToken || buffer) return;
+          buffer = head;
+          partial = true;
+          deck.dispatch("loadeddata");
+          attach(position);
+          deck.dispatch("playing");
+        },
+      );
       if (token !== loadToken) return; // a newer track was asked for meanwhile
       remember(url, audio);
-      buffer = audio;
+      const wasPartial = partial;
+      const soundingOnPrefix = wasPartial && running && node;
+      partial = false;
       loading = false;
-      deck.dispatch("loadeddata");
-      // play() was pressed while this was still loading — start it now, and
-      // say so: "playing" is what brings the sound back up out of the duck
-      // the swap went into, and without it the new track ran on in silence.
-      if (running) {
-        attach(position);
-        deck.dispatch("playing");
+      if (soundingOnPrefix) {
+        // Hand over from the prefix to the whole thing without a seam: the new
+        // source is scheduled to begin at the very instant the old one is cut,
+        // at the offset the playhead will have reached by then.
+        handOver(audio);
+      } else {
+        buffer = audio;
+        deck.dispatch("loadeddata");
+        // play() was pressed while this was still loading — start it now, and
+        // say so: "playing" is what brings the sound back up out of the duck
+        // the swap went into, and without it the new track ran on in silence.
+        if (running) {
+          attach(position);
+          deck.dispatch("playing");
+        }
       }
     } catch {
       if (token !== loadToken) return;
       loading = false;
+      partial = false;
       deck.dispatch("error");
     }
+  };
+
+  // Swap the prefix for the complete track mid-flight. Scheduled rather than
+  // done on the spot: stopping one source and starting another from JS leaves
+  // a millisecond of nothing, while giving both the same audio-clock instant
+  // joins them sample to sample.
+  const handOver = (whole) => {
+    const old = node;
+    buffer = whole;
+    if (!old || !audioCtx) {
+      if (running) attach(position);
+      return;
+    }
+    advance();
+    const at = audioCtx.currentTime + HANDOVER_LEAD;
+    const rate = old.playbackRate.value;
+    const offset = Math.min(position + (at - clock) * rate, whole.duration - 0.01);
+    const next = audioCtx.createBufferSource();
+    next.buffer = whole;
+    next.playbackRate.value = rate;
+    next.connect(gainNode);
+    // the old one's ending is our doing, not the track's
+    old.onended = null;
+    old.stop(at);
+    next.onended = () => {
+      if (stopping) return;
+      running = false;
+      ended = true;
+      deck.dispatch("pause");
+      deck.dispatch("ended");
+    };
+    next.start(at, Math.max(0, offset));
+    node = next;
+    // the position is now measured from the instant the new source begins
+    position = Math.max(0, offset);
+    clock = at;
   };
 
   const deck = {
@@ -687,6 +792,7 @@ function makeDeck() {
       src = url;
       detach();
       running = false;
+      partial = false;
       ensureAudioGraph();
       load(url);
     },
@@ -707,6 +813,10 @@ function makeDeck() {
       setTimeout(() => deck.dispatch("seeked"), SEEK_SETTLE_MS);
     },
     get duration() {
+      // While a prefix is playing this is what the whole track runs to, not
+      // what is decoded — otherwise the bar would scale itself to the part and
+      // jump when the rest arrived.
+      if (partial && expected) return expected;
       return buffer ? buffer.duration : NaN;
     },
     get paused() {
@@ -740,6 +850,11 @@ function makeDeck() {
       p.cancelScheduledValues(t);
       p.setValueAtTime(p.value, t);
       p.linearRampToValueAtTime(rate, t + RATE_GLIDE);
+    },
+    // The track's real length, from the library, so the bar is right from the
+    // first moment even while only a prefix has been decoded.
+    set expectedDuration(seconds) {
+      expected = Number(seconds) > 0 ? Number(seconds) : 0;
     },
     // resampling always carries the pitch with it — that is the whole point —
     // so these exist only so the callers that set them keep working
@@ -2362,7 +2477,9 @@ function currentTrack() {
 }
 
 function announceTrack() {
-  if (trackChangeHandler) trackChangeHandler(currentTrack(), trackIndex);
+  const entry = currentTrack();
+  audioEl.expectedDuration = (entry && entry.duration) || 0;
+  if (trackChangeHandler) trackChangeHandler(entry, trackIndex);
 }
 
 // play() hands back a promise that rejects with AbortError whenever a new
@@ -3034,6 +3151,13 @@ function domReady() {
   return new Promise((resolve) => document.addEventListener("DOMContentLoaded", resolve, { once: true }));
 }
 
+// Resolved once the canvas layer has everything it draws with — the page's
+// cover waits on this so nothing appears while it is still being assembled.
+let bootDone;
+const bootReady = new Promise((resolve) => {
+  bootDone = resolve;
+});
+
 async function boot() {
   await domReady(); // the mounts have to exist before anything can be measured
   PROJECT_IMAGES.push(...PROJECT_SOURCE);
@@ -3116,6 +3240,7 @@ async function boot() {
   resize();
   buildPlayer();
   buildField();
+  bootDone();
   requestAnimationFrame(loop);
 }
 
@@ -3311,6 +3436,10 @@ window.reactiveField = {
   },
   // The two halves of a change of record, so the cover can be taken off and
   // put back on exactly as fast as the sound falls and comes back.
+  // Settles once the canvas layer is fully built; see bootReady.
+  ready() {
+    return bootReady;
+  },
   swapDurationsMs() {
     return { lift: SWAP_LIFT_MS, drop: SWAP_DROP_MS };
   },

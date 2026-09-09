@@ -1314,6 +1314,9 @@ function entryFor(project, track) {
     track: track.title,
     album: albumOf(project),
     src: track.src,
+    // carried through so the deck knows the length before it has decoded the
+    // whole file — see expectedDuration
+    duration: track.duration ?? null,
     art: project.image,
     project: project.id,
     bpm: track.bpm ?? null,
@@ -1695,6 +1698,7 @@ function buildTrack(track, project) {
     album: albumOf(project),
     art: project.image || "./previews/kletka.webp",
     src: track.src,
+    duration: track.duration ?? null, // so the bar is right before the file is
     project: project.id, // which palette the page wears while this is playing
     bpm: track.bpm ?? null, // and what the field's wave beats against
     weight: PICK_WEIGHT[pickOf(track)],
@@ -3170,9 +3174,37 @@ measureFeed();
 // it stops swallowing clicks. The fallback timer is for browsers that never
 // fire animationend — a hidden tab at load, mostly, where the animation may
 // not have started at all.
+// Longest the cover will wait for the page before giving up and showing it
+// anyway — one stalled asset must not leave a visitor looking at a flat field.
+const PRELOADER_MAX_MS = 6000;
+
+// Everything that would otherwise arrive in view, one piece after another:
+// the fonts the whole page is set in, the canvas layer's own boot (the blob
+// outlines, the transport icons, the player cluster, the field), and every
+// image *decoded* rather than merely fetched — a fetched image still pops as
+// it is decoded on first paint.
+function whenPageReady() {
+  const waits = [];
+  if (document.fonts && document.fonts.ready) waits.push(document.fonts.ready);
+  if (window.reactiveField && window.reactiveField.ready) waits.push(window.reactiveField.ready());
+  waits.push(
+    Promise.all(
+      [...document.images].map((img) => (img.decode ? img.decode().catch(() => {}) : null)),
+    ),
+  );
+  return Promise.race([
+    Promise.all(waits),
+    new Promise((resolve) => setTimeout(resolve, PRELOADER_MAX_MS)),
+  ]);
+}
+
 const pagePreloader = document.getElementById("pagePreloader");
 if (pagePreloader) {
   const dismiss = () => pagePreloader.classList.add("is-hidden");
-  pagePreloader.addEventListener("animationend", dismiss, { once: true });
-  setTimeout(dismiss, 2000);
+  whenPageReady().then(() => {
+    pagePreloader.addEventListener("animationend", dismiss, { once: true });
+    pagePreloader.classList.add("is-leaving");
+    // belt and braces: some browsers skip animationend on a hidden tab
+    setTimeout(dismiss, 2000);
+  });
 }
