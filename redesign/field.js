@@ -750,7 +750,7 @@ function makeDeck() {
 
     play() {
       ensureAudioGraph();
-      if (audioCtx.state === "suspended") audioCtx.resume();
+      resumeAudio();
       if (!running) {
         running = true;
         deck.dispatch("play");
@@ -827,6 +827,7 @@ function ensureAudioGraph() {
   // ahead of the analyser, so the circles see the same fade the ears do
   gainNode.connect(analyser);
   analyser.connect(audioCtx.destination);
+  watchAudioState();
 }
 
 // What "full volume" means for the fades — the level the element carried on
@@ -834,6 +835,26 @@ function ensureAudioGraph() {
 const FULL_GAIN = 0.6;
 
 // `to` is 0..1 — callers ask for silence or for full, and full is FULL_GAIN.
+// Safari parks a context at "interrupted" as well as "suspended" — another
+// app took the audio session, or the tab spent time in the background — and
+// it only ever leaves that state on being asked. Testing for "suspended"
+// alone was enough in Chrome, which has no such state, and silently was not
+// here: the graph stayed frozen, so a press produced a spin-up with no sound
+// behind it. Anything that isn't running gets asked.
+function resumeAudio() {
+  if (!audioCtx) return;
+  if (audioCtx.state !== "running") audioCtx.resume();
+}
+
+// ...and it can be interrupted again at any point, so it is asked once more
+// whenever it drifts while something is meant to be sounding.
+function watchAudioState() {
+  if (!audioCtx || !audioCtx.addEventListener) return;
+  audioCtx.addEventListener("statechange", () => {
+    if (transportOn && audioCtx.state !== "running") audioCtx.resume();
+  });
+}
+
 function fadeGain(to, ms = FADE_MS) {
   if (!gainNode) return;
   const now = audioCtx.currentTime;
@@ -2492,7 +2513,40 @@ function stopSpin() {
   // it lands has to call that off too
   if (spinStopTimer !== null) clearTimeout(spinStopTimer);
   spinStopTimer = null;
+  pendingSpin = null;
 }
+
+// A track that isn't in hand yet has nothing to spin: the buffer source only
+// exists once the file has arrived, so a sweep started at the press just runs
+// the rate up against no sound at all and is spent by the time the first
+// sample plays — which is exactly how a track loaded from cold ended up
+// starting at full speed with no effect on it. Held here instead and let go
+// the moment the sound is actually running.
+let pendingSpin = null;
+
+function spinWhenSounding(to, ms, ease, then, onStart) {
+  if (soundIsRunning()) {
+    if (onStart) onStart();
+    spin(to, ms, ease, then);
+    return;
+  }
+  stopSpin();
+  pendingSpin = { to, ms, ease, then, onStart };
+}
+
+// Sounding, not merely meant to be: the deck reports `paused` false from the
+// moment play is pressed, while the file may still be on its way.
+function soundIsRunning() {
+  return !audioEl.paused && audioEl.readyState >= 3;
+}
+
+audioEl.addEventListener("playing", () => {
+  if (!pendingSpin) return;
+  const held = pendingSpin;
+  pendingSpin = null;
+  if (held.onStart) held.onStart();
+  spin(held.to, held.ms, held.ease, held.then);
+});
 
 function spin(to, ms, ease, then) {
   stopSpin();
@@ -2530,7 +2584,7 @@ function spinUp() {
   setTransport(true);
   startAudio();
   const ms = SPIN_UP_MS * ((1 - audioEl.playbackRate) / (1 - TURNTABLE_FLOOR));
-  spin(1, ms, spinUpEase);
+  spinWhenSounding(1, ms, spinUpEase);
 }
 
 // The element is only actually paused once the sweep has run — but the press
@@ -2611,11 +2665,14 @@ function swapRecord(apply) {
       // and "playing" brings the sound back as soon as it is actually running
       applyRate(TURNTABLE_FLOOR);
       startAudio();
-      spin(1, SWAP_DROP_MS, spinUpEase);
       // Cleared at the *start* of the drop, not the end: the cover has to rise
       // over the same 450ms the pitch climbs. Left until the spin finished, it
-      // only began coming back once the sound was already up to speed.
-      swapping = false;
+      // only began coming back once the sound was already up to speed — and
+      // handed to the drop itself, so a track still arriving keeps the cover
+      // down until there is something to bring it back up with.
+      spinWhenSounding(1, SWAP_DROP_MS, spinUpEase, null, () => {
+        swapping = false;
+      });
     }, SWAP_CUT_MS);
   });
   // after spin(), which cancels whatever ran before it
@@ -2625,7 +2682,7 @@ function swapRecord(apply) {
 function toggleAudio() {
   if (!playlist.length) return;
   ensureAudioGraph();
-  if (audioCtx.state === "suspended") audioCtx.resume();
+  resumeAudio();
 
   if (!transportOn) {
     if (!audioEl.src) {
@@ -2648,6 +2705,10 @@ function switchToTrackIndex(index) {
   const n = playlist.length;
   if (!n) return;
   trackIndex = ((index % n) + n) % n;
+  // however it was reached — prev, a click in the list, the end of a track —
+  // it counts as heard, so the bag must not offer it again this pass
+  const spent = shuffleBag.indexOf(trackIndex);
+  if (spent !== -1) shuffleBag.splice(spent, 1);
   // The transport's own state, not `paused`: at the end of a track the
   // element has already paused itself by the time this runs, and a record
   // still winding down is on its way to a stop even though it is not paused
@@ -2663,20 +2724,43 @@ function switchToTrackIndex(index) {
 // A shuffle pick that honours the weight each entry carries — the page sets
 // it from the track's `pick`, and anything at zero is not in the queue in the
 // first place. Entries without one count as an ordinary 1.
-function weightedIndex(exclude) {
-  let total = 0;
+// Shuffle deals a bag rather than rolling a fresh pick each time. Rolling
+// meant a track could come round again while most of the queue had not been
+// heard at all — with 86 tracks the odds of a repeat inside the first dozen
+// are better than even. Dealt, every track is heard once before any is heard
+// twice, and the weights decide the *order* within the pass instead of the
+// odds of each draw: a heavier track tends to land early, a weight of 0 is
+// left out of the bag entirely.
+let shuffleBag = [];
+
+function dealShuffleBag(exclude) {
+  const left = [];
   for (let i = 0; i < playlist.length; i++) {
-    if (i === exclude) continue;
-    total += playlist[i].weight ?? 1;
+    // Whatever is playing as the bag is dealt has been heard this pass and
+    // belongs to the next one. Leaving it in was how the very first track kept
+    // coming back around: it is set straight onto the deck at startup, never
+    // passing through the removal that every later track goes through.
+    if (i !== exclude && (playlist[i].weight ?? 1) > 0) left.push(i);
   }
-  if (total <= 0) return -1;
-  let roll = Math.random() * total;
-  for (let i = 0; i < playlist.length; i++) {
-    if (i === exclude) continue;
-    roll -= playlist[i].weight ?? 1;
-    if (roll <= 0) return i;
+  const bag = [];
+  while (left.length) {
+    let total = 0;
+    for (const i of left) total += playlist[i].weight ?? 1;
+    let roll = Math.random() * total;
+    let at = 0;
+    for (; at < left.length - 1; at++) {
+      roll -= playlist[left[at]].weight ?? 1;
+      if (roll <= 0) break;
+    }
+    bag.push(left.splice(at, 1)[0]);
   }
-  return playlist.length - 1;
+  return bag;
+}
+
+function takeFromBag() {
+  if (!shuffleBag.length) shuffleBag = dealShuffleBag(trackIndex);
+  const next = shuffleBag.shift();
+  return next === undefined ? -1 : next;
 }
 
 // Which track comes after this one. On shuffle it used to be rolled at the
@@ -2689,14 +2773,21 @@ function decideNext() {
   const n = playlist.length;
   if (!n) return -1;
   if (!shuffleOn || n < 2) return (trackIndex + 1) % n;
-  const pick = weightedIndex(trackIndex);
+  const pick = takeFromBag();
   return pick >= 0 ? pick : (trackIndex + 1) % n;
 }
 
 // Decode the one that's coming while the current one plays, so changing the
 // record doesn't have to wait on the network and the decoder mid-gesture.
 function warmNextTrack() {
-  queuedNext = decideNext();
+  // Only when there isn't already one waiting. "playing" fires on every
+  // resume, not just on a new track, and decideNext() takes a position out of
+  // the shuffle bag — so drawing on each one quietly emptied the bag faster
+  // than tracks were actually played, and a pass stopped covering the queue.
+  if (queuedNext < 0) queuedNext = decideNext();
+  // ...and it must not point at the track now playing, which prev or a jump
+  // can leave it doing.
+  if (queuedNext === trackIndex) queuedNext = -1;
   const entry = playlist[queuedNext];
   if (entry && entry.src) audioEl.prefetch(entry.src);
 }
@@ -2710,9 +2801,8 @@ function playAdjacentTrack(direction) {
     switchToTrackIndex(next);
     return;
   }
-  if (shuffleOn && n > 1) {
-    const next = weightedIndex(trackIndex);
-    switchToTrackIndex(next >= 0 ? next : (trackIndex + 1) % n);
+  if (shuffleOn && n > 1 && direction > 0) {
+    switchToTrackIndex(decideNext());
   } else {
     switchToTrackIndex(trackIndex + direction);
   }
@@ -3052,8 +3142,11 @@ function loop() {
       // whether the record is still turning, and how fast — a wind-down is
       // still sounding for two seconds after the press, and the covers turn
       // on this rather than on a fixed clock
-      sounding: !audioEl.paused,
-      rate: audioEl.paused ? 0 : spinRate,
+      // Both of these mean "the record is turning", which a track still on its
+      // way is not — so the covers stay still until it has actually arrived
+      // rather than spinning up against silence.
+      sounding: soundIsRunning(),
+      rate: soundIsRunning() ? spinRate : 0,
       // mid-change of record, so the cover can be taken off and put back on
       // the same beat as the sound — see renderRecordSwap
       swapping,
@@ -3136,6 +3229,7 @@ window.reactiveField = {
   setPlaylist(tracks) {
     playlist = tracks;
     trackIndex = 0;
+    shuffleBag = [];
     announceTrack();
     const first = currentTrack();
     if (first && !audioEl.src) {
@@ -3198,6 +3292,13 @@ window.reactiveField = {
   isPlaying() {
     return transportOn;
   },
+  // Whether a track is genuinely sounding, as opposed to merely meant to be:
+  // between the press and the file arriving, isPlaying() is already true and
+  // this is not. Anything that should wait for the sound itself — the record's
+  // spin, the covers turning, the palette — asks this one.
+  isSounding() {
+    return soundIsRunning();
+  },
   // How long the transport UI (progress bar, icons) takes to reveal itself,
   // so the page can time its own transitions to the same beat.
   revealDurationMs() {
@@ -3219,13 +3320,14 @@ window.reactiveField = {
   playPlaylist(tracks) {
     if (!tracks || !tracks.length) return;
     ensureAudioGraph();
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    resumeAudio();
     // as with playEntry: a new selection while something is already sounding
     // is a change of record, not a start
     const running = transportOn;
     playlist = tracks;
     trackIndex = 0;
     externalTrack = null;
+    shuffleBag = [];
     if (running) {
       swapRecord(() => {
         audioEl.src = tracks[0].src;
@@ -3276,7 +3378,7 @@ window.reactiveField = {
   play(index) {
     if (typeof index === "number") switchToTrackIndex(index);
     ensureAudioGraph();
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    resumeAudio();
     if (!audioEl.src && currentTrack()) {
       audioEl.src = currentTrack().src;
       announceTrack();
@@ -3290,7 +3392,7 @@ window.reactiveField = {
   play() {
     if (!audioEl.src) return toggleAudio();
     ensureAudioGraph();
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    resumeAudio();
     spinUp();
   },
   // Play something that isn't in the playlist — a track picked straight out
@@ -3298,7 +3400,7 @@ window.reactiveField = {
   // becomes what the now-playing block shows.
   playEntry(entry) {
     ensureAudioGraph();
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    resumeAudio();
     // picking another track out of the list is a track change, not a start —
     // unless nothing was sounding, in which case it is one
     const running = transportOn;

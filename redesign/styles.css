@@ -263,15 +263,16 @@ html {
    descendant combinator keeps :root itself — and so the token transition —
    out of it.
 
-   Two things are held out of it, because they move rather than recolour and
-   both move at exactly the moment a palette change lands. The cover's lift and
-   drop is a transform and an opacity — a change of record recolours the page
-   and swaps the record on the same beat, and this rule was cancelling the
-   movement outright, so the cover snapped back instead of rising. The
-   now-playing block is the same story: it glides up or down as a name wraps to
-   another line, and that also happens exactly when the track changes. */
-:root.is-repainting *:not(.brand-art):not(.np-meta) {
-  transition: none !important;
+   What is muted is colour specifically, not movement. Killing transitions
+   outright also stopped everything that happens to be moving at the same
+   moment — and a palette change lands on exactly the beat a track starts or
+   changes, which is when the most is moving: the logo shrinking to its badge,
+   the cover lifting and dropping, the now-playing block gliding as a name
+   wraps to another line. Each of those snapped. Naming the properties that may
+   still transition says what was meant all along, and needs no list of
+   exceptions to keep up with. */
+:root.is-repainting * {
+  transition-property: width, height, border-radius, opacity, transform !important;
 }
 
 * {

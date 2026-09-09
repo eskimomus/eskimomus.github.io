@@ -1449,6 +1449,22 @@ let cuedEntry = null;
 // the tempo the rings turn to, alongside the one the field's wave beats to
 let currentBpm = null;
 
+// The palette waits for the track the way the record does. A press only says
+// what is *meant* to be playing; a track still on its way would otherwise
+// recolour the whole page seconds before a note of it is heard. Held here and
+// released by renderTrackProgress the moment the sound is genuinely running.
+let pendingPalette = null;
+
+function queueTrackPalette(entry, soundingNow) {
+  if (!entry) return;
+  if (soundingNow) {
+    pendingPalette = null;
+    applyTrackPalette(entry);
+    return;
+  }
+  pendingPalette = entry;
+}
+
 function applyTrackPalette(entry) {
   const palette = paletteForEntry(entry);
   const key = `${palette.gold}|${palette.bg}|${(palette.dots || []).join()}`;
@@ -1504,15 +1520,18 @@ function renderNowPlaying(entry) {
   // finishes on the new grid.
   currentBpm = entry.bpm ?? trackBpm(entry.src);
   if (window.reactiveField) window.reactiveField.setTempo(currentBpm);
-  // skipping to another track mid-playback recolours right away; when nothing
-  // is sounding this only remembers what would play, and the palette waits
-  if (window.reactiveField && window.reactiveField.isPlaying()) applyTrackPalette(entry);
+  // Skipping to another track mid-playback recolours as soon as that track is
+  // actually sounding; when nothing is playing this only remembers what would,
+  // and the palette waits either way.
+  const field = window.reactiveField;
+  if (field && field.isPlaying()) queueTrackPalette(entry, field.isSounding());
 }
 
 // idle -> round badge over the spinning cover, and back
 function renderPlayState(playing) {
   brand.classList.toggle("is-playing", playing);
-  if (playing) applyTrackPalette(cuedEntry);
+  if (playing) queueTrackPalette(cuedEntry, window.reactiveField.isSounding());
+  else pendingPalette = null; // stopped before it ever arrived
   // the ring turns for as long as its own selection is sounding, however the
   // sound was started or stopped — the tag, the top player, or the track
   // simply running out
@@ -3077,6 +3096,7 @@ function renderTrackProgress(state) {
   syncPlatter(state.rate);
   renderRecordSwap(state.swapping);
   renderLoadProgress(state.loadProgress);
+  if (pendingPalette && state.sounding) queueTrackPalette(pendingPalette, true);
 }
 
 // The cover comes off and goes back on with the sound. The timing is field.js's
