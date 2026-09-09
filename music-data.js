@@ -893,8 +893,8 @@ const SIDE_PROJECTS = [
       "text": "taburett collaboration project",
       "href": "https://www.youtube.com/@taburettaburetich"
     },
-    "title": "kylskåp",
-    "album": "kylskåp",
+    "title": "kylskåp – two days",
+    "album": "kylskåp – two days",
     "tags": "authentic 00s electronic psyop (tell no one) album",
     "image": "./previews/kylskap.webp",
     "categories": [
@@ -1095,8 +1095,8 @@ const SIDE_PROJECTS = [
       "accent": "#c80000",
       "bg": "#310800"
     },
-    "title": "plumborx2008",
-    "album": "plumborx2008",
+    "title": "plumborx2008 – plicexx204821982",
+    "album": "plumborx2008 – plicexx204821982",
     "tags": "lo-fi ambient techno project about mushrooms",
     "image": "./previews/plumborx2008.webp",
     "categories": [
@@ -1633,5 +1633,136 @@ const SIDE_PROJECTS = [
         "content": null
       }
     ]
+  },
+  {
+    "id": "polagik",
+    "title": "jake austin – polagik",
+    "tags": "aka plumborx2008",
+    "image": "./previews/polagik.webp",
+    "categories": [
+      {
+        "id": "tracks",
+        "title": "tracks",
+        "tracks": [
+          {
+            "title": "i wish you were born",
+            "detail": "",
+            "src": "./assets/audio/polagik/i-wish-you-were-born.mp3",
+            "duration": 195.448125,
+            "genres": [
+              "ambient"
+            ],
+            "vibes": [
+              "calm",
+              "beautiful",
+              "melancholic"
+            ]
+          },
+          {
+            "title": "goddray",
+            "detail": "",
+            "src": "./assets/audio/polagik/goddray.mp3",
+            "duration": 268.382,
+            "genres": [
+              "ambient"
+            ],
+            "vibes": [
+              "calm",
+              "beautiful",
+              "melancholic"
+            ]
+          },
+          {
+            "title": "tair.mt pt. 1",
+            "detail": "",
+            "src": "./assets/audio/polagik/tair-mt-pt-1.mp3",
+            "duration": 196.388563,
+            "genres": [
+              "ambient",
+              "ambient techno"
+            ],
+            "vibes": [
+              "calm",
+              "beautiful",
+              "melancholic"
+            ]
+          },
+          {
+            "title": "thalas",
+            "detail": "",
+            "src": "./assets/audio/polagik/thalas.mp3",
+            "duration": 148.244875,
+            "vibes": [
+              "calm",
+              "beautiful",
+              "melancholic"
+            ],
+            "genres": [
+              "ambient"
+            ]
+          },
+          {
+            "title": "thank you ms Margarett",
+            "detail": "",
+            "src": "./assets/audio/polagik/thank-you-ms-margarett.mp3",
+            "duration": 91.062813,
+            "genres": [
+              "ambient"
+            ],
+            "vibes": [
+              "eerie",
+              "melancholic",
+              "calm"
+            ]
+          },
+          {
+            "title": "tair.mt pt. 2",
+            "detail": "",
+            "src": "./assets/audio/polagik/tair-mt-pt-2.mp3",
+            "duration": 142.942,
+            "genres": [
+              "ambient"
+            ],
+            "vibes": [
+              "calm",
+              "beautiful",
+              "melancholic"
+            ]
+          },
+          {
+            "title": "dwarfsta",
+            "detail": "",
+            "src": "./assets/audio/polagik/dwarfsta.mp3",
+            "duration": 213.39425,
+            "genres": [
+              "ambient"
+            ],
+            "vibes": [
+              "eerie"
+            ]
+          },
+          {
+            "title": "polagik",
+            "detail": "",
+            "src": "./assets/audio/polagik/polagik.mp3",
+            "duration": 180.035875,
+            "genres": [
+              "ambient"
+            ],
+            "vibes": [
+              "calm",
+              "beautiful",
+              "melancholic"
+            ]
+          }
+        ],
+        "content": null
+      }
+    ],
+    "album": "jake austin – polagik",
+    "colors": {
+      "accent": "#1C8087",
+      "bg": "#081722"
+    }
   }
 ];
