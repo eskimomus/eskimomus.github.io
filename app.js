@@ -1392,11 +1392,15 @@ window.addEventListener("resize", centreNowPlaying);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(centreNowPlaying);
 
 // The logo is injected rather than used as an <img> so its paths stay in the
-// document and the page's palette (--bg / --gold) can drive its colors.
+// document and the page's palette (--bg / --gold) can drive its colors. The
+// loading screen's badge takes the same markup, so both recolour together and
+// the file is fetched once.
 async function mountLogo() {
   try {
     const svg = await fetch("./assets/logo.svg").then((r) => r.text());
     brandLogo.innerHTML = svg;
+    const mark = document.getElementById("preloaderMark");
+    if (mark) mark.innerHTML = svg;
   } catch {
     // leaving the badge empty is better than blocking the rest of the page
   }
@@ -3118,12 +3122,28 @@ function swapDurations() {
   return field && field.swapDurationsMs ? field.swapDurationsMs() : { lift: 300, drop: 450 };
 }
 
+// The brisk lift and drop belong to the record change alone. Left on the
+// element they became the timing for everything: after one press of prev or
+// next, stopping the music snatched the cover away in 450ms instead of the
+// two seconds the reveal is supposed to take, because the inline duration
+// outlives the swap that set it. So it is cleared once the record is back
+// down, which hands .brand-art's own --reveal back to play and pause.
+let swapDurationReset = 0;
+
 function renderRecordSwap(swapping) {
   if (!brand || swapping === recordSwapping) return;
   recordSwapping = swapping;
   const { lift, drop } = swapDurations();
   const art = brand.querySelector(".brand-art");
-  if (art) art.style.transitionDuration = `${swapping ? lift : drop}ms`;
+  clearTimeout(swapDurationReset);
+  if (art) {
+    art.style.transitionDuration = `${swapping ? lift : drop}ms`;
+    if (!swapping) {
+      swapDurationReset = setTimeout(() => {
+        art.style.transitionDuration = "";
+      }, drop);
+    }
+  }
   brand.classList.toggle("is-swapping", Boolean(swapping));
 }
 
@@ -3169,42 +3189,64 @@ measureFeed();
 // Preloader
 // --------------------------------------------------------------------------
 
-// The cover slides away on its own (a CSS animation, so it runs whatever
-// happens to this script); this only takes it out of the layout afterwards so
-// it stops swallowing clicks. The fallback timer is for browsers that never
-// fire animationend — a hidden tab at load, mostly, where the animation may
-// not have started at all.
-// Longest the cover will wait for the page before giving up and showing it
-// anyway — one stalled asset must not leave a visitor looking at a flat field.
-const PRELOADER_MAX_MS = 6000;
+// Longest the screen will wait before showing the site anyway — one stalled
+// asset must not leave a visitor looking at a flat field forever. It is a
+// backstop and not a schedule: the screen says the site is downloading and
+// asks for patience, so cutting it short at the old six seconds was the very
+// thing being complained about. A whole library of artwork and the first
+// track do not arrive in six seconds on anything but a warm cache.
+const PRELOADER_MAX_MS = 20000;
 
 // Everything that would otherwise arrive in view, one piece after another:
 // the fonts the whole page is set in, the canvas layer's own boot (the blob
-// outlines, the transport icons, the player cluster, the field), and every
-// image *decoded* rather than merely fetched — a fetched image still pops as
-// it is decoded on first paint.
-function whenPageReady() {
-  const waits = [];
-  if (document.fonts && document.fonts.ready) waits.push(document.fonts.ready);
-  if (window.reactiveField && window.reactiveField.ready) waits.push(window.reactiveField.ready());
-  waits.push(
-    Promise.all(
-      [...document.images].map((img) => (img.decode ? img.decode().catch(() => {}) : null)),
-    ),
+// outlines, the transport icons, the player cluster, the field), the track
+// the play button would start, and every image *decoded* rather than merely
+// fetched — a fetched image still pops as it is decoded on first paint.
+//
+// The images are asked for last, in their own turn. Read alongside the rest
+// they were only the images that existed at that instant, and anything the
+// field's own boot went on to add was never waited for at all.
+async function whenPageReady() {
+  const field = window.reactiveField;
+  const first = [];
+  if (document.fonts && document.fonts.ready) first.push(document.fonts.ready);
+  if (field && field.ready) first.push(field.ready());
+  if (field && field.firstTrackReady) first.push(field.firstTrackReady());
+  await Promise.all(first);
+  await Promise.all(
+    [...document.images].map((img) => (img.decode ? img.decode().catch(() => {}) : null)),
   );
-  return Promise.race([
-    Promise.all(waits),
-    new Promise((resolve) => setTimeout(resolve, PRELOADER_MAX_MS)),
-  ]);
+}
+
+// The loading screen leaves in two movements: the cover fades away, badge and
+// copy with it, and the site fades up from nothing behind it.
+function bootMs(name, fallback) {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return raw.endsWith("ms") ? n : n * 1000;
 }
 
 const pagePreloader = document.getElementById("pagePreloader");
-if (pagePreloader) {
-  const dismiss = () => pagePreloader.classList.add("is-hidden");
-  whenPageReady().then(() => {
-    pagePreloader.addEventListener("animationend", dismiss, { once: true });
-    pagePreloader.classList.add("is-dropping");
-    // belt and braces: some browsers skip animationend on a hidden tab
-    setTimeout(dismiss, 2000);
-  });
+const bootRoot = document.documentElement;
+
+function leaveLoadingScreen() {
+  const fade = bootMs("--boot-fade", 500);
+  const reveal = bootMs("--boot-reveal", 700);
+
+  if (pagePreloader) pagePreloader.classList.add("is-dropping");
+
+  setTimeout(() => {
+    if (pagePreloader) pagePreloader.classList.add("is-hidden");
+    // One frame, both: the transition is armed before the value it carries
+    // changes, or the page simply appears.
+    bootRoot.classList.add("is-revealing");
+    bootRoot.classList.remove("is-booting");
+    setTimeout(() => bootRoot.classList.remove("is-revealing"), reveal + 80);
+  }, fade);
 }
+
+Promise.race([
+  whenPageReady(),
+  new Promise((resolve) => setTimeout(resolve, PRELOADER_MAX_MS)),
+]).then(leaveLoadingScreen);

@@ -54,10 +54,15 @@ const BLOB_SVG_URLS = [
   "./assets/circle-blob-5.svg",
   "./assets/circle-blob-6.svg",
 ];
-const PLAY_ICON_URL = "./assets/icon-play.svg";
-const PAUSE_ICON_URL = "./assets/icon-pause.svg";
-const PREV_ICON_URL = "./assets/icon-prev.svg";
-const NEXT_ICON_URL = "./assets/icon-next.svg";
+// These four are fetched at runtime rather than linked from the page, so
+// they miss the ?v= that index.html puts on everything else and a visitor
+// who has been here before keeps the outlines they cached. Move the number
+// whenever the artwork changes.
+const ICON_V = "?v=2";
+const PLAY_ICON_URL = "./assets/icon-play.svg" + ICON_V;
+const PAUSE_ICON_URL = "./assets/icon-pause.svg" + ICON_V;
+const PREV_ICON_URL = "./assets/icon-prev.svg" + ICON_V;
+const NEXT_ICON_URL = "./assets/icon-next.svg" + ICON_V;
 const SHUFFLE_ICON_URL = "./assets/icon-shuffle.svg";
 const LOADING_ICON_URL = "./assets/icon-loading.svg";
 const PLAYER_TRACK_URL = "./assets/player-bar.svg";
@@ -3217,6 +3222,10 @@ const bootReady = new Promise((resolve) => {
   bootDone = resolve;
 });
 
+// Made on the first ask rather than at load: the playlist arrives from the
+// page, so before it does there is no track to wait for. See firstTrackReady.
+let firstTrackSettled = null;
+
 async function boot() {
   await domReady(); // the mounts have to exist before anything can be measured
   PROJECT_IMAGES.push(...PROJECT_SOURCE);
@@ -3499,6 +3508,26 @@ window.reactiveField = {
   // Settles once the canvas layer is fully built; see bootReady.
   ready() {
     return bootReady;
+  },
+  // Settles once the track the play button would start has arrived and been
+  // decoded, so the first press answers with music rather than a spinner.
+  // Nothing is playing while the loading screen is up, so the deck's
+  // play-from-a-prefix path is not in force and one loadeddata means the
+  // whole file. Errors settle it too — a track that will not load is not a
+  // reason to hold the site back.
+  firstTrackReady() {
+    if (firstTrackSettled) return firstTrackSettled;
+    firstTrackSettled = new Promise((resolve) => {
+      if (!audioEl.src || audioEl.readyState >= 3) return resolve();
+      const done = () => {
+        audioEl.removeEventListener("loadeddata", done);
+        audioEl.removeEventListener("error", done);
+        resolve();
+      };
+      audioEl.addEventListener("loadeddata", done);
+      audioEl.addEventListener("error", done);
+    });
+    return firstTrackSettled;
   },
   swapDurationsMs() {
     return { lift: SWAP_LIFT_MS, drop: SWAP_DROP_MS };

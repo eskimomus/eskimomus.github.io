@@ -28,13 +28,25 @@
             (root.clientHeight > root.clientWidth ? 1 : 0.7),
         ),
       );
+      // The loading screen is the first thing painted, so the page has to be
+      // out of sight before that paint rather than a frame after it. Set here
+      // and cleared by app.js once everything has actually arrived.
+      root.classList.add("is-booting");
     </script>
-    <link rel="stylesheet" href="./styles.css?v=68" />
+    <link rel="stylesheet" href="./styles.css?v=70" />
   </head>
   <body>
-    <!-- Covers the page for the first beat and then drops away, as the old
-         site's did — only in this one's background colour. -->
-    <div class="page-preloader" id="pagePreloader" aria-hidden="true"></div>
+    <!-- The loading screen. It covers the page until every last image, the
+         canvas layer and the first track have arrived, so the site is never
+         seen half-built. The badge that turns here belongs to the cover and
+         leaves with it; the page has a badge of its own. -->
+    <div class="page-preloader" id="pagePreloader" role="status" aria-label="loading">
+      <div class="page-preloader-mark" id="preloaderMark" aria-hidden="true"></div>
+      <p class="page-preloader-note">
+        this website contains a lot of stuff.<br />
+        please wait a little until it’s fully downloaded
+      </p>
+    </div>
 
     <!-- Circles layer: pinned to the viewport, drawn through the scroll offset.
          pointer-events:none, so the page's own UI stays clickable. -->
@@ -166,7 +178,7 @@
     <script src="./data.js?v=9"></script>
     <script src="./feed-data.js?v=22"></script>
     <script src="./music-data.js?v=25"></script>
-    <script src="./field.js?v=62"></script>
-    <script src="./app.js?v=87"></script>
+    <script src="./field.js?v=63"></script>
+    <script src="./app.js?v=89"></script>
   </body>
 </html>
