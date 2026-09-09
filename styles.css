@@ -72,6 +72,11 @@
 :root {
   --scale: 1;
 
+  /* Where .content's own contents begin, measured from the top of the page.
+     Named because the field views subtract it from the viewport to work out
+     how much room is left beneath them — see .tab[data-tab="contacts"]. */
+  --content-top: 115.8rem;
+
   /* palette — the only place hex values live */
   --bg: #242228;
   --gold: #b18050;
@@ -759,7 +764,7 @@ html {
    view toggle, the music sub-nav — so each carries the same 191 itself. */
 .content {
   position: relative;
-  padding-top: 115.8rem; /* 1349 - 91 - 100 */
+  padding-top: var(--content-top); /* 1349 - 91 - 100 */
 }
 
 /* Every switch on the page crossfades the same way: what's on screen goes to
@@ -1049,11 +1054,36 @@ html {
   padding-top: 21.7rem;
 }
 
-/* Contacts has no view toggle over it, so the gap the projects field leaves
-   for those buttons is just empty air here — the grid comes up 300 to sit
-   under the menu instead of well below it. */
-[data-tab="contacts"] .projects-field {
-  margin-top: -30rem;
+/* The field hangs from the bottom of the page rather than floating in the
+   middle of it.
+
+   The grid is a fixed count of rows, so on any page taller than it there was
+   dead space underneath — a sliver on a desktop, and on a phone the grid
+   ended less than halfway down with an empty screen below it. Giving the tab
+   the rest of the viewport and letting the field's top margin absorb the
+   slack puts the bottom row on the bottom edge, whatever the screen. It also
+   replaces the hand-set lift contacts used to carry: with the grid measured
+   from the bottom, there is nothing left for it to correct.
+
+   svh and not vh: on a phone vh is measured as though the browser's own
+   chrome were hidden, which would push the last row underneath the address
+   bar. svh is the viewport at its smallest, and unlike dvh it does not change
+   as that chrome comes and goes — which would relayout the field, and rebuild
+   the canvas, on every scroll. */
+/* :not([hidden]) because the tabs are switched with the attribute alone and
+   lean on the browser's own display:none for it — any display declared here
+   would outrank that and lay the hidden tab out anyway, which doubled the
+   height of the page. */
+.tab[data-tab="projects"]:not([hidden]),
+.tab[data-tab="contacts"]:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--content-top));
+  min-height: calc(100svh - var(--content-top));
+}
+
+.projects-field {
+  margin-top: auto;
 }
 
 /* field.js measures this box and then sets its height to exactly what the

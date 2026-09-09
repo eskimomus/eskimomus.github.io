@@ -149,7 +149,34 @@ const PROJECT_IMAGES = [];
 let fieldMountId = "fieldMount";
 const fieldBlobCache = new Map();
 
-let dpr = Math.min(window.devicePixelRatio || 1, 2);
+// How many device pixels the canvas gets per CSS pixel.
+//
+// This used to be a flat cap of 2, which is the right ceiling for a desktop —
+// past it a full-viewport canvas costs more to fill every frame than the
+// sharpness is worth. On a phone it was the wrong answer twice over: the
+// screen is usually 3x, and the canvas is a fraction of the size, so the cap
+// threw away a third of the resolution the device had while the pixels it
+// refused were cheaper than the ones a desktop pays for happily. Every
+// outline on the small screen came out chewed.
+//
+// So the ceiling follows the size of the surface instead of being fixed: how
+// many pixels there are to fill is the thing that actually costs, not the
+// ratio. Under the budget the screen gets what it asks for, up to 3; over it
+// the answer is 2, which is where it has always been, so nothing that works
+// today gets slower. A phone at 375x812 comes out at 3, a laptop at 1440x900
+// and a 4K desktop both at 2.
+const DPR_PIXEL_BUDGET = 3.5e6; // device px per canvas
+const DPR_MAX = 3;
+const DPR_FLOOR = 2; // the cap before this existed — never go below it
+
+function pixelRatioForViewport() {
+  const want = window.devicePixelRatio || 1;
+  const area = Math.max(1, window.innerWidth * window.innerHeight);
+  const affordable = Math.sqrt(DPR_PIXEL_BUDGET / area);
+  return Math.min(want, Math.max(DPR_FLOOR, Math.min(DPR_MAX, affordable)));
+}
+
+let dpr = pixelRatioForViewport();
 let width = 0;
 let pageLeft = 0; // document x of the page's left edge — 0 until the scale caps
 let height = 0; // canvas height — the viewport's, since the canvas is fixed to it
@@ -196,6 +223,10 @@ function resize() {
   width = window.innerWidth;
   viewportHeight = window.innerHeight;
   height = viewportHeight;
+  // Rotating a phone, or dragging a window between screens of different
+  // densities, changes the answer — and sizeSurface only rewrites the backing
+  // store when the numbers actually differ, so asking every time is free.
+  dpr = pixelRatioForViewport();
   maxScroll = Math.max(0, document.documentElement.scrollHeight - viewportHeight);
   applyCanvasSize();
 }
@@ -2374,7 +2405,30 @@ function pointerPos(e) {
   return { x: t.clientX + window.scrollX, y: t.clientY + window.scrollY };
 }
 
+// One tap on a touchscreen is two presses as far as these handlers are
+// concerned: the browser sends touchstart, and then — for the benefit of
+// pages written before touch existed — synthesises a whole mouse sequence
+// from the same tap. Both were wired to this function, so every tap ran it
+// twice. On the play button that meant press, and un-press: the record
+// started winding down and then came straight back up, which read as the
+// stop animation half-playing and nothing else happening.
+//
+// A touch wins, and mouse events are ignored for a moment afterwards. The
+// window is generous because the synthesised sequence can arrive a good
+// fraction of a second after the finger leaves.
+const MOUSE_AFTER_TOUCH_MS = 700;
+let lastTouchAt = -Infinity;
+
+function fromSynthesizedMouse(e) {
+  if (e.type.startsWith("touch")) {
+    lastTouchAt = performance.now();
+    return false;
+  }
+  return performance.now() - lastTouchAt < MOUSE_AFTER_TOUCH_MS;
+}
+
 function onPointerDown(e) {
+  if (fromSynthesizedMouse(e)) return;
   const p = pointerPos(e);
   mouse.x = p.x;
   mouse.y = p.y;
@@ -2425,13 +2479,15 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
+  if (fromSynthesizedMouse(e)) return;
   const p = pointerPos(e);
   mouse.x = p.x;
   mouse.y = p.y;
   if (draggingProgress) seekProgressBarTo(p.x);
 }
 
-function onPointerUp() {
+function onPointerUp(e) {
+  if (e && fromSynthesizedMouse(e)) return;
   const wasScrubbing = draggingProgress;
   draggingProgress = false;
   // held down through the drag, brought back on release — the last seek of a
@@ -2459,6 +2515,9 @@ window.addEventListener("mouseup", onPointerUp);
 window.addEventListener("touchstart", onPointerDown, { passive: true });
 window.addEventListener("touchmove", onPointerMove, { passive: true });
 window.addEventListener("touchend", onPointerUp);
+// A scroll taking the gesture over ends it without a touchend, which used to
+// leave a dragged circle stuck to the finger.
+window.addEventListener("touchcancel", onPointerUp);
 
 // ---------------------------------------------------------------------------
 // Audio controls
