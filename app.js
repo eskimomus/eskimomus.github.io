@@ -3193,9 +3193,10 @@ measureFeed();
 // asset must not leave a visitor looking at a flat field forever. It is a
 // backstop and not a schedule: the screen says the site is downloading and
 // asks for patience, so cutting it short at the old six seconds was the very
-// thing being complained about. A whole library of artwork and the first
-// track do not arrive in six seconds on anything but a warm cache.
-const PRELOADER_MAX_MS = 20000;
+// thing being complained about. Measured on a cold load of the live site, the
+// canvas layer alone was still assembling a minute in, and the page had been
+// uncovered forty seconds before that.
+const PRELOADER_MAX_MS = 30000;
 
 // Everything that would otherwise arrive in view, one piece after another:
 // the fonts the whole page is set in, the canvas layer's own boot (the blob
