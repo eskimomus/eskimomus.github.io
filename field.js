@@ -1245,6 +1245,17 @@ function buildField() {
   const neededHeight = topRowRadius + (rows - 1) * cellSize + CIRCLE_MAX_R;
   if (Math.abs(mount.height - neededHeight) > 1) {
     mount.el.style.height = neededHeight + "px";
+    // Read the box back rather than just patching the height in. The field
+    // hangs from the bottom of the page, so its own height is what decides
+    // where its top lands: set one and the other has moved under you, and
+    // everything below — the lattice's origin, the canvas that covers it —
+    // would be laid out against a top that is no longer there.
+    const settled = mountRect(fieldMountId);
+    if (settled) {
+      mount.left = settled.left;
+      mount.top = settled.top;
+      mount.width = settled.width;
+    }
     mount.height = neededHeight;
   }
 
