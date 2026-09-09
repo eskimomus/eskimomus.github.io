@@ -1193,7 +1193,8 @@ const SIDE_PROJECTS = [
             "detail": "",
             "src": "./assets/audio/plumborx2008/xxverter.mp3",
             "duration": 10.449,
-            "bpm": 107
+            "bpm": 107,
+            "pick": 0
           },
           {
             "title": "radiotrophika i",
