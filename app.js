@@ -1401,8 +1401,123 @@ async function mountLogo() {
     brandLogo.innerHTML = svg;
     const mark = document.getElementById("preloaderMark");
     if (mark) mark.innerHTML = svg;
+    startFavicon(svg);
   } catch {
     // leaving the badge empty is better than blocking the rest of the page
+  }
+}
+
+// --------------------------------------------------------------------------
+// The tab icon
+// --------------------------------------------------------------------------
+// The favicon is the logo, and it wears whatever palette the page is wearing:
+// start a track and the browser's own tab changes colour with the site.
+//
+// Handed over as a PNG data URL rather than an SVG one. An SVG favicon is a
+// prettier answer and Safari does not take it, and this has to work in the
+// browser chrome of all places, where a failure is a blank square rather than
+// something anyone can debug.
+//
+// The mark is rasterised once as an alpha stencil and tinted from then on, so
+// following a 600ms palette fade costs a few fills of a 64px canvas rather
+// than re-rendering an SVG on every step.
+const FAVICON_PX = 64;
+const FAVICON_STEP_MS = 90; // how often the icon is redrawn mid-fade
+
+let faviconStencil = null;
+let faviconLink = null;
+let faviconLast = "";
+let faviconChecked = 0;
+
+// Swap the fill on the tag carrying a class, leaving the rest of the file be.
+function recolourByClass(svgText, className, fill) {
+  const tag = new RegExp(`<[^>]*class="${className}"[^>]*>`);
+  return svgText.replace(tag, (m) => m.replace(/fill="[^"]*"/, `fill="${fill}"`));
+}
+
+function rasterizeToCanvas(svgText, px) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = px;
+      canvas.height = px;
+      canvas.getContext("2d").drawImage(img, 0, 0, px, px);
+      resolve(canvas);
+    };
+    img.onerror = reject;
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText);
+  });
+}
+
+// A fresh element every time rather than a new href on the old one. Chromium
+// re-reads a changed href; Safari has long been happy to leave the icon it
+// already has, and replacing the node is what it does notice.
+function installFavicon(href) {
+  for (const old of document.querySelectorAll('link[rel="icon"]')) old.remove();
+  faviconLink = document.createElement("link");
+  faviconLink.rel = "icon";
+  faviconLink.type = "image/png";
+  faviconLink.href = href;
+  document.head.appendChild(faviconLink);
+}
+
+function paintFavicon() {
+  if (!faviconStencil) return;
+  const style = getComputedStyle(document.documentElement);
+  const bg = style.getPropertyValue("--bg").trim();
+  const gold = style.getPropertyValue("--gold").trim();
+  if (!bg || !gold) return;
+  const key = bg + "|" + gold;
+  if (key === faviconLast) return; // mid-fade this repeats often
+  faviconLast = key;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = FAVICON_PX;
+  canvas.height = FAVICON_PX;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, FAVICON_PX, FAVICON_PX);
+
+  // the mark, in the accent: a square of colour cut down to the stencil
+  const tinted = document.createElement("canvas");
+  tinted.width = FAVICON_PX;
+  tinted.height = FAVICON_PX;
+  const tctx = tinted.getContext("2d");
+  tctx.fillStyle = gold;
+  tctx.fillRect(0, 0, FAVICON_PX, FAVICON_PX);
+  tctx.globalCompositeOperation = "destination-in";
+  tctx.drawImage(faviconStencil, 0, 0);
+  ctx.drawImage(tinted, 0, 0);
+
+  installFavicon(canvas.toDataURL("image/png"));
+}
+
+// The tokens interpolate frame by frame, so the icon is redrawn along the way
+// rather than once at each end — the tab changes colour with the page instead
+// of snapping when it has finished.
+//
+// Polled from the frame handler rather than started by setPalette. A timer
+// hung off that call missed the fades that begin a beat after the properties
+// are written, and left the icon holding a colour the page had moved on from.
+// Asking the stylesheet what it currently says cannot be out of step with it,
+// whatever set it and whenever the transition decides to start; paintFavicon
+// returns immediately when the answer has not changed, which is nearly always.
+function followPaletteInFavicon(now) {
+  if (!faviconStencil || now - faviconChecked < FAVICON_STEP_MS) return;
+  faviconChecked = now;
+  paintFavicon();
+}
+
+async function startFavicon(svgText) {
+  try {
+    // ground dropped, mark forced opaque: what is left is the shape's alpha
+    let stencil = recolourByClass(svgText, "logo-ground", "none");
+    stencil = recolourByClass(stencil, "logo-mark", "#ffffff");
+    faviconStencil = await rasterizeToCanvas(stencil, FAVICON_PX);
+    paintFavicon();
+  } catch {
+    // a tab without an icon is not worth breaking the page over
   }
 }
 
@@ -3104,6 +3219,7 @@ function renderTrackProgress(state) {
   syncPlatter(state.rate);
   renderRecordSwap(state.swapping);
   renderLoadProgress(state.loadProgress);
+  followPaletteInFavicon(performance.now());
   if (pendingPalette && state.sounding) queueTrackPalette(pendingPalette, true);
 }
 
