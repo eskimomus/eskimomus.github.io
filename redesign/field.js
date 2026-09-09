@@ -2816,11 +2816,46 @@ function toggleAudio() {
 // else. The button turns it off.
 let shuffleOn = true;
 
-function switchToTrackIndex(index) {
+// Where prev goes. A shuffled order only exists as it happens, so unless it
+// is written down "the one before" has no answer — which is why prev used to
+// step to trackIndex - 1, a track that had nothing to do with what had just
+// played. `playedBack` is what has been heard, most recent last; and since
+// prev leaves a trail of its own, `playedForward` holds what it stepped away
+// from, so next retraces that path instead of rolling a fresh pick.
+const HISTORY_MAX = 200;
+let playedBack = [];
+let playedForward = [];
+
+function rememberPlayed(stack, index) {
+  if (index < 0 || index >= playlist.length) return;
+  if (stack[stack.length - 1] === index) return; // no runs of the same track
+  stack.push(index);
+  if (stack.length > HISTORY_MAX) stack.shift();
+}
+
+function forgetHistory() {
+  playedBack = [];
+  playedForward = [];
+}
+
+// `history` says what the move means to the trail: "push" is an ordinary
+// move onwards (next, the end of a track, a click in the list) and abandons
+// any retraced path; "back" and "forward" are prev and next walking that
+// path, each handing the track it leaves to the other side.
+function switchToTrackIndex(index, history = "push") {
   externalTrack = null; // back under the playlist's control
   const n = playlist.length;
   if (!n) return;
+  const from = trackIndex;
   trackIndex = ((index % n) + n) % n;
+  if (trackIndex !== from) {
+    if (history === "back") {
+      rememberPlayed(playedForward, from);
+    } else {
+      rememberPlayed(playedBack, from);
+      if (history === "push") playedForward = [];
+    }
+  }
   // however it was reached — prev, a click in the list, the end of a track —
   // it counts as heard, so the bag must not offer it again this pass
   const spent = shuffleBag.indexOf(trackIndex);
@@ -2896,6 +2931,15 @@ function decideNext() {
 // Decode the one that's coming while the current one plays, so changing the
 // record doesn't have to wait on the network and the decoder mid-gesture.
 function warmNextTrack() {
+  // Standing on a retraced path, what comes next is already known — and
+  // drawing from the bag for it would spend a track that never gets played.
+  const ahead = playedForward.length ? playedForward[playedForward.length - 1] : -1;
+  if (ahead >= 0 && ahead !== trackIndex) {
+    queuedNext = -1;
+    const waiting = playlist[ahead];
+    if (waiting && waiting.src) audioEl.prefetch(waiting.src);
+    return;
+  }
   // Only when there isn't already one waiting. "playing" fires on every
   // resume, not just on a new track, and decideNext() takes a position out of
   // the shuffle bag — so drawing on each one quietly emptied the bag faster
@@ -2911,16 +2955,32 @@ function warmNextTrack() {
 function playAdjacentTrack(direction) {
   const n = playlist.length;
   if (!n) return;
-  if (direction > 0 && queuedNext >= 0) {
+  if (direction < 0) {
+    // On shuffle the trail is the only record of the order; in stored order
+    // the list itself is, and the neighbour above is what prev should mean.
+    if (shuffleOn && n > 1 && playedBack.length) {
+      switchToTrackIndex(playedBack.pop(), "back");
+    } else {
+      switchToTrackIndex(trackIndex - 1);
+    }
+    return;
+  }
+  if (playedForward.length) {
+    const ahead = playedForward.pop();
+    if (queuedNext === ahead) queuedNext = -1;
+    switchToTrackIndex(ahead, "forward");
+    return;
+  }
+  if (queuedNext >= 0) {
     const next = queuedNext;
     queuedNext = -1; // spent; the new track decides its own successor
     switchToTrackIndex(next);
     return;
   }
-  if (shuffleOn && n > 1 && direction > 0) {
+  if (shuffleOn && n > 1) {
     switchToTrackIndex(decideNext());
   } else {
-    switchToTrackIndex(trackIndex + direction);
+    switchToTrackIndex(trackIndex + 1);
   }
 }
 
@@ -3354,6 +3414,7 @@ window.reactiveField = {
     playlist = tracks;
     trackIndex = 0;
     shuffleBag = [];
+    forgetHistory();
     announceTrack();
     const first = currentTrack();
     if (first && !audioEl.src) {
@@ -3456,6 +3517,7 @@ window.reactiveField = {
     trackIndex = 0;
     externalTrack = null;
     shuffleBag = [];
+    forgetHistory(); // a different queue — the old trail points at other tracks
     if (running) {
       swapRecord(() => {
         audioEl.src = tracks[0].src;
