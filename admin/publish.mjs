@@ -39,7 +39,11 @@ function git(...argv) {
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (err += d));
     child.on("error", reject);
-    child.on("close", (code) => resolve({ code, out: out.trim(), err: err.trim() }));
+    // Only the trailing newline goes. `git status --porcelain` puts the state
+    // in the first two columns, so a leading space is data: trimming the whole
+    // output shifts every path two characters left and the first line's status
+    // becomes part of its filename.
+    child.on("close", (code) => resolve({ code, out: out.replace(/\s+$/, ""), err: err.trim() }));
   });
 }
 
@@ -78,7 +82,7 @@ async function expand(entries) {
       continue;
     }
     const listed = await git("ls-files", "--others", "--exclude-standard", "--", e.file);
-    for (const f of listed.out.split("\n").filter(Boolean)) out.push({ ...e, file: f });
+    for (const f of listed.out.split("\n").map((s) => s.trim()).filter(Boolean)) out.push({ ...e, file: f });
   }
   return out;
 }
@@ -152,14 +156,14 @@ if (staged.code === 0) {
   process.exit(0);
 }
 await gitOrDie("commit", "-m", subjectToUse);
-const head = (await gitOrDie("rev-parse", "HEAD")).out;
+const head = (await gitOrDie("rev-parse", "HEAD")).out.trim();
 console.log(`\ncommitted ${head.slice(0, 7)}`);
 
 for (let attempt = 1; attempt <= PUSH_TRIES; attempt++) {
   process.stdout.write(`pushing (attempt ${attempt}/${PUSH_TRIES})… `);
   const push = await git("push", "origin", "HEAD:main");
   const remote = await git("ls-remote", "--heads", "origin", "main");
-  if (remote.out.startsWith(head)) {
+  if (remote.out.trim().startsWith(head)) {
     console.log("done.");
     console.log(`\n${SITE} will show it once GitHub Pages rebuilds, usually within a minute.`);
     process.exit(0);
