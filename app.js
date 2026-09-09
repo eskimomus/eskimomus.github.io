@@ -3193,26 +3193,29 @@ measureFeed();
 // asset must not leave a visitor looking at a flat field forever. It is a
 // backstop and not a schedule: the screen says the site is downloading and
 // asks for patience, so cutting it short at the old six seconds was the very
-// thing being complained about. Measured on a cold load of the live site, the
-// canvas layer alone was still assembling a minute in, and the page had been
-// uncovered forty seconds before that.
-const PRELOADER_MAX_MS = 30000;
+// thing being complained about. Measured on a cold load of the live site over
+// a slow line, the whole page now arrives inside this; it used to take past a
+// minute, and the backstop uncovered a page whose player had not been drawn.
+const PRELOADER_MAX_MS = 45000;
 
 // Everything that would otherwise arrive in view, one piece after another:
 // the fonts the whole page is set in, the canvas layer's own boot (the blob
-// outlines, the transport icons, the player cluster, the field), the track
-// the play button would start, and every image *decoded* rather than merely
-// fetched — a fetched image still pops as it is decoded on first paint.
+// outlines, the transport icons, the player cluster, the field), and every
+// image *decoded* rather than merely fetched — a fetched image still pops as
+// it is decoded on first paint.
 //
 // The images are asked for last, in their own turn. Read alongside the rest
 // they were only the images that existed at that instant, and anything the
 // field's own boot went on to add was never waited for at all.
+//
+// The first track is deliberately not in here. It is fetched once the page is
+// up — see warmFirstTrack — because it is bigger than everything above put
+// together and was taking the connection away from them.
 async function whenPageReady() {
   const field = window.reactiveField;
   const first = [];
   if (document.fonts && document.fonts.ready) first.push(document.fonts.ready);
   if (field && field.ready) first.push(field.ready());
-  if (field && field.firstTrackReady) first.push(field.firstTrackReady());
   await Promise.all(first);
   await Promise.all(
     [...document.images].map((img) => (img.decode ? img.decode().catch(() => {}) : null)),
@@ -3236,6 +3239,10 @@ function leaveLoadingScreen() {
   const reveal = bootMs("--boot-reveal", 700);
 
   if (pagePreloader) pagePreloader.classList.add("is-dropping");
+
+  // The page has what it needs, so the connection is free for the audio now.
+  const field = window.reactiveField;
+  if (field && field.warmFirstTrack) field.warmFirstTrack();
 
   setTimeout(() => {
     if (pagePreloader) pagePreloader.classList.add("is-hidden");

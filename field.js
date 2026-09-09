@@ -3222,10 +3222,6 @@ const bootReady = new Promise((resolve) => {
   bootDone = resolve;
 });
 
-// Made on the first ask rather than at load: the playlist arrives from the
-// page, so before it does there is no track to wait for. See firstTrackReady.
-let firstTrackSettled = null;
-
 async function boot() {
   await domReady(); // the mounts have to exist before anything can be measured
   PROJECT_IMAGES.push(...PROJECT_SOURCE);
@@ -3416,17 +3412,27 @@ window.reactiveField = {
   },
   // Each entry needs { title, album, art, src }.
   // The queue arrives already shuffled, so its first entry is what play will
-  // start — decided here, at load, rather than at the press. Loading it now
-  // means the button answers with sound instead of with a wait, and the wave
-  // has a duration to work from before anything is pressed.
+  // start — decided here, at load, rather than at the press. Only decided,
+  // though: fetching it is warmFirstTrack's job and waits for the page.
   setPlaylist(tracks) {
     playlist = tracks;
     trackIndex = 0;
     shuffleBag = [];
     forgetHistory();
     announceTrack();
+  },
+  // Start fetching the track the play button would begin with.
+  //
+  // Held back until the page is actually on screen. A track is a couple of
+  // megabytes and it was being fetched from the first moment, sharing one
+  // connection with every image and outline the page itself is waiting on.
+  // Measured on a slow line it took thirty seconds of a seventy-second load
+  // and pushed the canvas layer — the big player, the field — out past the
+  // point where the loading screen gave up and uncovered a page that had no
+  // player on it yet. Nothing needs the audio until something is pressed.
+  warmFirstTrack() {
     const first = currentTrack();
-    if (first && !audioEl.src) {
+    if (first && first.src && !audioEl.src) {
       audioEl.preload = "auto"; // the whole file, not just its metadata
       audioEl.src = first.src;
     }
@@ -3508,26 +3514,6 @@ window.reactiveField = {
   // Settles once the canvas layer is fully built; see bootReady.
   ready() {
     return bootReady;
-  },
-  // Settles once the track the play button would start has arrived and been
-  // decoded, so the first press answers with music rather than a spinner.
-  // Nothing is playing while the loading screen is up, so the deck's
-  // play-from-a-prefix path is not in force and one loadeddata means the
-  // whole file. Errors settle it too — a track that will not load is not a
-  // reason to hold the site back.
-  firstTrackReady() {
-    if (firstTrackSettled) return firstTrackSettled;
-    firstTrackSettled = new Promise((resolve) => {
-      if (!audioEl.src || audioEl.readyState >= 3) return resolve();
-      const done = () => {
-        audioEl.removeEventListener("loadeddata", done);
-        audioEl.removeEventListener("error", done);
-        resolve();
-      };
-      audioEl.addEventListener("loadeddata", done);
-      audioEl.addEventListener("error", done);
-    });
-    return firstTrackSettled;
   },
   swapDurationsMs() {
     return { lift: SWAP_LIFT_MS, drop: SWAP_DROP_MS };
