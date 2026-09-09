@@ -236,8 +236,13 @@ html {
 /* It leaves when the page is actually ready, not on a timer — see
    whenPageReady in app.js. On a timer it uncovered the page mid-build, and
    the menu, then the logo, then the circles and the rows arrived one after
-   another in full view. */
-.page-preloader.is-leaving {
+   another in full view.
+
+   Named `is-dropping` and not `is-leaving`, which is already the panel
+   crossfade's class further down and carries `opacity: 0`. Sharing it made
+   the cover vanish on the spot while this animation played out invisibly
+   underneath — the slide was running the whole time, just on nothing. */
+.page-preloader.is-dropping {
   animation: preloader-exit 1000ms cubic-bezier(0.76, 0, 0.24, 1) forwards;
 }
 

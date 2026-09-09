@@ -3203,7 +3203,7 @@ if (pagePreloader) {
   const dismiss = () => pagePreloader.classList.add("is-hidden");
   whenPageReady().then(() => {
     pagePreloader.addEventListener("animationend", dismiss, { once: true });
-    pagePreloader.classList.add("is-leaving");
+    pagePreloader.classList.add("is-dropping");
     // belt and braces: some browsers skip animationend on a hidden tab
     setTimeout(dismiss, 2000);
   });
