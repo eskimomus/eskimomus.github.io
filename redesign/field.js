@@ -2782,14 +2782,13 @@ function swapRecord(apply) {
       // and "playing" brings the sound back as soon as it is actually running
       applyRate(TURNTABLE_FLOOR);
       startAudio();
-      // Cleared at the *start* of the drop, not the end: the cover has to rise
-      // over the same 450ms the pitch climbs. Left until the spin finished, it
-      // only began coming back once the sound was already up to speed — and
-      // handed to the drop itself, so a track still arriving keeps the cover
-      // down until there is something to bring it back up with.
-      spinWhenSounding(1, SWAP_DROP_MS, spinUpEase, null, () => {
-        swapping = false;
-      });
+      // The record is on the platter now, so it comes back into view now —
+      // even if it has not finished arriving. Held until the drop instead, a
+      // track that had to be fetched left an empty ring under the logo for the
+      // whole download. It simply doesn't turn yet: the rotation follows the
+      // sound rather than this, and there is none until the file is playable.
+      swapping = false;
+      spinWhenSounding(1, SWAP_DROP_MS, spinUpEase);
     }, SWAP_CUT_MS);
   });
   // after spin(), which cancels whatever ran before it
