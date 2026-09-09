@@ -24,9 +24,43 @@ const PAGE_MAX_WIDTH = 1200;
 // just waste the little it has, so those keep the full scale.
 const PAGE_ZOOM = 0.7;
 
+// How wide a classic scrollbar is here, measured rather than assumed: 0 where
+// the scrollbars are overlays and draw over the content, 15 to 17 where they
+// take their own column. Asked once — it cannot change while the page is
+// open — and off-screen, so nothing about it is visible.
+let scrollbarWidthCache = null;
+
+function scrollbarWidth() {
+  if (scrollbarWidthCache !== null) return scrollbarWidthCache;
+  if (!document.body) return 0; // asked too early to measure; try again later
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "position:absolute;top:-9999px;left:-9999px;width:100px;height:100px;overflow:scroll;";
+  document.body.appendChild(probe);
+  scrollbarWidthCache = probe.offsetWidth - probe.clientWidth;
+  probe.remove();
+  return scrollbarWidthCache;
+}
+
+// The width the design is scaled to fit.
+//
+// Not clientWidth, which is what the page can use *right now*: a classic
+// scrollbar takes its column out of that, so a tab tall enough to scroll was
+// a percent and a half narrower than one that fits, and moving between them
+// jumped the size of everything. Not innerWidth either, which ignores the
+// scrollbar and would push the design under it.
+//
+// Instead, always leave the scrollbar its column, whether or not one is
+// showing. On the tabs that scroll it is an exact fit; on the ones that do
+// not, the page sits a scrollbar narrower with that much more background
+// either side, which is what it already does on any screen past the cap. The
+// number stops depending on the page's height, which is the whole point.
+function layoutWidth() {
+  return window.innerWidth - scrollbarWidth();
+}
+
 function pageZoom() {
-  const root = document.documentElement;
-  return root.clientHeight > root.clientWidth ? 1 : PAGE_ZOOM;
+  return document.documentElement.clientHeight > layoutWidth() ? 1 : PAGE_ZOOM;
 }
 
 // The old site did this too: the layout is built by script, so a scroll
@@ -35,15 +69,15 @@ if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
 // One number drives the whole layout: every size in styles.css is expressed
 // in design pixels and multiplied by this, so the page looks identical at
-// any width instead of reflowing. clientWidth (not innerWidth) so a visible
-// scrollbar doesn't push the design wider than the space it actually has.
+// any width instead of reflowing. See layoutWidth for which width, and why
+// it is not simply the one the page currently has.
 // A rescale changes the computed size of everything at once. Anything with a
 // size transition (the logo) would animate its way there, so transitions are
 // muted for the frame the new scale lands on. The very first scale is set by
 // an inline script in the document head, before the first paint.
 function applyPageScale() {
   const root = document.documentElement;
-  const scale = (Math.min(root.clientWidth, PAGE_MAX_WIDTH) / PAGE_DESIGN_WIDTH) * pageZoom();
+  const scale = (Math.min(layoutWidth(), PAGE_MAX_WIDTH) / PAGE_DESIGN_WIDTH) * pageZoom();
   if (root.style.getPropertyValue("--scale") === String(scale)) return;
 
   root.classList.add("is-rescaling");
@@ -1689,13 +1723,19 @@ window.addEventListener("resize", () => {
 // A resize event isn't a reliable trigger on its own — the viewport also
 // changes when a scrollbar appears or disappears (which expanding a project
 // does), and observing the root element catches every one of those.
+//
+// It watches the width the layout is actually built to, not the one the page
+// currently has: a scrollbar coming and going changes the second and not the
+// first, and rebuilding for it is what used to jump the scale between tabs.
+// The circles still have to be laid out again, since the mounts moved.
 if (typeof ResizeObserver !== "undefined") {
-  let lastWidth = document.documentElement.clientWidth;
+  let lastWidth = layoutWidth();
   new ResizeObserver(() => {
-    const width = document.documentElement.clientWidth;
-    if (width === lastWidth) return;
-    lastWidth = width;
-    applyPageScale();
+    const width = layoutWidth();
+    if (width !== lastWidth) {
+      lastWidth = width;
+      applyPageScale();
+    }
     relayoutField();
   }).observe(document.documentElement);
 }

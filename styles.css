@@ -402,21 +402,8 @@ body {
    halves of that are gone now — the player draws on its own in-flow canvas,
    and field.js clamps its scroll offset to [0, maxScroll] — so the bounce
    carries the whole page, canvas included, as one piece. */
-/* Keep the scrollbar's gutter whether or not there is a bar to put in it.
-   The whole design is scaled from clientWidth, and a classic scrollbar takes
-   17px out of that — so a tab tall enough to scroll came out a percent and a
-   half smaller than one that was not, and moving between them jumped the
-   scale of everything on the page. Held open, the number never moves. */
 html {
   overscroll-behavior: auto;
-  /* for anything that has not got scrollbar-gutter yet */
-  overflow-y: scroll;
-}
-@supports (scrollbar-gutter: stable) {
-  html {
-    overflow-y: auto;
-    scrollbar-gutter: stable;
-  }
 }
 
 /* The player's canvas: in the document's own flow, one band tall, so the

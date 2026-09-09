@@ -18,32 +18,44 @@
       href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Tomorrow:wght@400&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="./styles.css?v=75" />
+  </head>
+  <body>
     <script>
       // Set the design's scale factor before anything paints. Left to app.js
       // it would land after the first style resolution, and every element
       // that transitions a size — the logo above all — would visibly animate
       // from its unscaled size down to the right one on every page load.
+      //
+      // Inside <body> rather than <head> because the width it needs is the
+      // one with the scrollbar's column already taken out, and measuring that
+      // column needs somewhere to put the probe. Still before the first
+      // paint: this blocks the parser, and nothing above it renders.
+      //
       // 1200 is the cap, 1920 the design's own width, 0.7 the overall zoom
       // (landscape only — a portrait screen has no width to spare, so it
       // keeps the full scale). Past the cap the page stops growing and sits
-      // centred, with background either side. Keep all three in step with
-      // PAGE_MAX_WIDTH / PAGE_ZOOM / pageZoom in app.js.
-      var root = document.documentElement;
-      root.style.setProperty(
-        "--scale",
-        String(
-          (Math.min(root.clientWidth, 1200) / 1920) *
-            (root.clientHeight > root.clientWidth ? 1 : 0.7),
-        ),
-      );
-      // The loading screen is the first thing painted, so the page has to be
-      // out of sight before that paint rather than a frame after it. Set here
-      // and cleared by app.js once everything has actually arrived.
-      root.classList.add("is-booting");
+      // centred, with background either side. Keep all of it in step with
+      // PAGE_MAX_WIDTH / PAGE_ZOOM / layoutWidth in app.js.
+      (function () {
+        var root = document.documentElement;
+        var probe = document.createElement("div");
+        probe.style.cssText =
+          "position:absolute;top:-9999px;left:-9999px;width:100px;height:100px;overflow:scroll;";
+        document.body.appendChild(probe);
+        var bar = probe.offsetWidth - probe.clientWidth;
+        probe.remove();
+        var width = window.innerWidth - bar;
+        root.style.setProperty(
+          "--scale",
+          String((Math.min(width, 1200) / 1920) * (root.clientHeight > width ? 1 : 0.7)),
+        );
+        // The loading screen is the first thing painted, so the page has to be
+        // out of sight before that paint rather than a frame after it. Set
+        // here and cleared by app.js once everything has actually arrived.
+        root.classList.add("is-booting");
+      })();
     </script>
-    <link rel="stylesheet" href="./styles.css?v=74" />
-  </head>
-  <body>
     <!-- The loading screen. It covers the page until every last image, the
          canvas layer and the first track have arrived, so the site is never
          seen half-built. The badge that turns here belongs to the cover and
@@ -200,6 +212,6 @@
     <script src="./feed-data.js?v=22"></script>
     <script src="./music-data.js?v=25"></script>
     <script src="./field.js?v=70"></script>
-    <script src="./app.js?v=96"></script>
+    <script src="./app.js?v=97"></script>
   </body>
 </html>
