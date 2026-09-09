@@ -1397,10 +1397,15 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(centreNowP
 // the file is fetched once.
 async function mountLogo() {
   try {
-    const svg = await fetch("./assets/logo.svg").then((r) => r.text());
+    // The loading screen already carries the outline, written into the page so
+    // that it and the line under it appear together. Take that copy rather
+    // than asking for the file again.
+    const inline = document.getElementById("preloaderMark");
+    const svg =
+      (inline && inline.innerHTML.trim()) ||
+      (await fetch("./assets/logo.svg").then((r) => r.text()));
     brandLogo.innerHTML = svg;
-    const mark = document.getElementById("preloaderMark");
-    if (mark) mark.innerHTML = svg;
+    if (inline && !inline.innerHTML.trim()) inline.innerHTML = svg;
     startFavicon(svg);
   } catch {
     // leaving the badge empty is better than blocking the rest of the page
