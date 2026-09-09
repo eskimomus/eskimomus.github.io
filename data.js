@@ -18,8 +18,8 @@ const PROJECTS = [
     "mask": 1,
     "paragraphs": [
       "kletka is a popular indie co-op horror set in a universe of samosbor, a russian internet myth about a world made up of one giant, endless panel high-rise building",
-      "kletka received strong praise from players, reaching 6000+ steam reviews with 90% positive ratings, 400k copies sold and millions of views across youtube",
-      "i composed 12 tracks for kletka in different styles, with four of them featured in the trailers. i also mastered the whole ost for the streamings (135 tracks), created 2-hour long ost tape mix and made a series of in-game audio recordings that tell the story of one of the kletka's prisoners"
+      "kletka received strong praise from players, reaching 6000+ steam reviews with a 90% positive rating, 400k copies sold and millions of views across youtube",
+      "i composed 12 tracks for kletka in different styles, with four of them featured in the trailers. i also mastered the whole ost for streaming (135 tracks), created a 2-hour-long ost tape mix and made a series of in-game audio recordings that tell the story of one of kletka's prisoners"
     ],
     "links": [
       {
@@ -68,7 +68,7 @@ const PROJECTS = [
     "paragraphs": [
       "insanely beautiful platformer/RPG. play as South, a stimulant-fueled purple bean, and parkour, converse and fight your way through sprawling dystopian city-scapes. each choice affects your abilities, dialogue, and even your appearance... just know, survival comes at a moral cost",
       "\"The art here looks amazing. Very pretty in a zany and crazy way.\" ABC news",
-      "i've already composed a lot of track for this game in every existing genres and don't plan to stop!"
+      "i've already composed a lot of tracks for this game in every genre there is and don't plan to stop!"
     ],
     "links": [
       {
@@ -91,7 +91,7 @@ const PROJECTS = [
     "image": "./previews/untorra.webp",
     "mask": 4,
     "paragraphs": [
-      "untorra is a tranquilly eerie soundtrack for a nineties inspired point and click puzzle game. \ndeveloped, сomposed and written by Matt Swan and for the first time ever available on CD's via EmpyreanRecords.\nthe game itself is currently available only on physical but will get released online in a couple of months."
+      "untorra is a tranquilly eerie soundtrack for a nineties-inspired point-and-click puzzle game.\ndeveloped, composed and written by Matt Swan and for the first time ever available on CDs via EmpyreanRecords.\nthe game itself is currently available only on physical media but will get released online in a couple of months."
     ],
     "links": [
       {
@@ -110,7 +110,7 @@ const PROJECTS = [
     "image": "./previews/indie-tracker.jpg",
     "mask": 2,
     "paragraphs": [
-      "i've finally finished my indie tracker to a usable enough state to upload it here! \nwhat's the point – the site parses indie trailers from YouTube and gets all the devs contacts it can. it can be useful for those who are looking for work in game dev. feel free to use it!"
+      "i've finally got my indie tracker to a usable enough state to upload it here!\nwhat it does: the site parses indie trailers from YouTube and gets all the devs' contacts it can. useful if you're looking for work in game dev. feel free to use it!"
     ],
     "links": [
       {
