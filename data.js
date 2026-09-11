@@ -96,11 +96,11 @@ const PROJECTS = [
     "links": [
       {
         "label": "take a listen",
-        "href": ""
+        "href": "#all-music/soundtracks/untorra"
       },
       {
         "label": "buy CD",
-        "href": ""
+        "href": "https://empyrean-records.myshopify.com/products/emp08-matt-swan-untorra?variant=58441317876056&fbclid=PAVERFWAUP-01wZG9mAmZkaWQWUOJ1nD-ZMF8bUdVJL1m4505smNTyAGV4dG4DYWVtAjEwAHNydGMGYXBwX2lkDzEyNDAyNDU3NDI4NzQxNAABp5m0VqzVoXrEwh6ff7j49Ht8EsjI4x8pQBNlyHNNkAdX3AuaTs4gkC5QjZdr_aem_-3HFpAclP3xkbL9aanGAGw"
       }
     ]
   },

@@ -691,7 +691,7 @@ const SOUNDTRACKS = [
     ]
   },
   {
-    "id": "industrial-ambient",
+    "id": "untorra",
     "colors": {
       "accent": "#a05e2c",
       "bg": "#291901"
@@ -706,47 +706,156 @@ const SOUNDTRACKS = [
         "title": "ingame music",
         "tracks": [
           {
-            "title": "playing jazz in the metropolis",
+            "title": "Industrial Ash",
             "detail": "",
-            "src": "./assets/audio/industrial-ambient/ingame/playing-jazz-in-the-metropolis.mp3",
-            "duration": 174.024,
-            "bpm": 83
+            "src": "./assets/audio/untorra/industrial-ash.mp3",
+            "duration": 210.755875,
+            "genres": [
+              "ambient"
+            ],
+            "vibes": [
+              "industrial",
+              "beautiful",
+              "calm",
+              "melancholic"
+            ]
           },
           {
-            "title": "capital’s barbershop",
+            "title": "Ezh",
             "detail": "",
-            "src": "./assets/audio/industrial-ambient/ingame/capitals-barbershop.mp3",
-            "duration": 85.368,
-            "bpm": 61
+            "src": "./assets/audio/untorra/ezh.mp3",
+            "duration": 153.23425,
+            "vibes": [
+              "industrial",
+              "beautiful",
+              "calm",
+              "melancholic"
+            ],
+            "genres": [
+              "ambient"
+            ]
           },
           {
-            "title": "bion",
+            "title": "Barbershop",
             "detail": "",
-            "src": "./assets/audio/industrial-ambient/ingame/bion.mp3",
-            "duration": 96.024,
-            "bpm": 85
+            "src": "./assets/audio/untorra/barbershop.mp3",
+            "duration": 159.059562,
+            "vibes": [
+              "industrial",
+              "beautiful",
+              "calm",
+              "melancholic"
+            ],
+            "genres": [
+              "ambient"
+            ]
           },
           {
-            "title": "greenhouse floor 264",
+            "title": "Bion",
             "detail": "",
-            "src": "./assets/audio/industrial-ambient/ingame/greenhouse-floor-264.mp3",
-            "duration": 112.032,
-            "bpm": 120
+            "src": "./assets/audio/untorra/bion.mp3",
+            "duration": 142.106063,
+            "vibes": [
+              "industrial",
+              "beautiful",
+              "calm",
+              "melancholic"
+            ],
+            "genres": [
+              "ambient"
+            ]
           },
           {
-            "title": "city lights",
+            "title": "Greenhouse Floor 264",
             "detail": "",
-            "src": "./assets/audio/industrial-ambient/ingame/city-lights.mp3",
-            "duration": 130.944,
-            "bpm": 75
+            "src": "./assets/audio/untorra/greenhouse-floor-264.mp3",
+            "duration": 106.24,
+            "vibes": [
+              "industrial",
+              "beautiful",
+              "calm",
+              "melancholic"
+            ],
+            "genres": [
+              "ambient",
+              "acoustic"
+            ]
           },
           {
-            "title": "industrial ash",
+            "title": "City Lights",
             "detail": "",
-            "src": "./assets/audio/industrial-ambient/ingame/industrial-ash.mp3",
-            "duration": 124.704,
-            "bpm": 77,
-            "pick": 3
+            "src": "./assets/audio/untorra/city-lights.mp3",
+            "duration": 157.44,
+            "vibes": [
+              "industrial",
+              "beautiful",
+              "calm",
+              "melancholic"
+            ],
+            "genres": [
+              "ambient"
+            ]
+          },
+          {
+            "title": "Playing Jazz in the Metropolis",
+            "detail": "",
+            "src": "./assets/audio/untorra/playing-jazz-in-the-metropolis.mp3",
+            "duration": 175.020375,
+            "vibes": [
+              "industrial",
+              "beautiful",
+              "calm",
+              "melancholic"
+            ],
+            "genres": [
+              "ambient"
+            ]
+          },
+          {
+            "title": "In a Swamp",
+            "detail": "",
+            "src": "./assets/audio/untorra/in-a-swamp.mp3",
+            "duration": 152.16325,
+            "vibes": [
+              "industrial",
+              "beautiful",
+              "calm",
+              "melancholic"
+            ],
+            "genres": [
+              "ambient"
+            ]
+          },
+          {
+            "title": "◊",
+            "detail": "",
+            "src": "./assets/audio/untorra/triangle.mp3",
+            "duration": 66.272625,
+            "genres": [
+              "ambient",
+              "acoustic"
+            ],
+            "vibes": [
+              "beautiful",
+              "calm",
+              "melancholic"
+            ]
+          },
+          {
+            "title": "Untorra",
+            "detail": "",
+            "src": "./assets/audio/untorra/untorra.mp3",
+            "duration": 179.9575,
+            "vibes": [
+              "beautiful",
+              "calm",
+              "melancholic"
+            ],
+            "genres": [
+              "ambient",
+              "acoustic",
+              "jazz"
+            ]
           }
         ],
         "content": null
