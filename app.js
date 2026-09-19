@@ -1440,7 +1440,6 @@ async function mountLogo() {
       (await fetch("./assets/logo.svg").then((r) => r.text()));
     brandLogo.innerHTML = svg;
     if (inline && !inline.innerHTML.trim()) inline.innerHTML = svg;
-    startFavicon(svg);
   } catch {
     // leaving the badge empty is better than blocking the rest of the page
   }
@@ -1449,44 +1448,62 @@ async function mountLogo() {
 // --------------------------------------------------------------------------
 // The tab icon
 // --------------------------------------------------------------------------
-// The favicon is the logo, and it wears whatever palette the page is wearing:
-// start a track and the browser's own tab changes colour with the site.
+// The favicon is the player's own lattice — seven by seven, corners dropped,
+// wearing the size gradient the dots wear on the page — and it takes whatever
+// palette the page is wearing: start a track and the browser's own tab
+// changes colour with the site.
 //
 // Handed over as a PNG data URL rather than an SVG one. An SVG favicon is a
 // prettier answer and Safari does not take it, and this has to work in the
 // browser chrome of all places, where a failure is a blank square rather than
 // something anyone can debug.
 //
-// The mark is rasterised once as an alpha stencil and tinted from then on, so
-// following a 600ms palette fade costs a few fills of a 64px canvas rather
-// than re-rendering an SVG on every step.
+// Drawn rather than cut from an outline. The dots on the page carry a ragged
+// blob edge; at the sixteen pixels a tab actually gives you, a wobbled circle
+// and a circle are the same picture. So this is four dozen arcs and a fill,
+// cheap enough to redraw on every step of a palette fade.
 const FAVICON_PX = 64;
 const FAVICON_STEP_MS = 90; // how often the icon is redrawn mid-fade
+const FAVICON_GRID = 7;
+const FAVICON_PAD = 0.04; // fraction of the icon left clear around the lattice
+// Straight from the design, the same pair field.js scales for the page.
+const FAVICON_CELL = 97.85;
+const FAVICON_MAX_R = 29.65;
 
-let faviconStencil = null;
+const FAVICON_CENTER = (FAVICON_GRID - 1) / 2;
+const FAVICON_CORNER_DIST = Math.hypot(FAVICON_CENTER, FAVICON_CENTER);
+
 let faviconLink = null;
 let faviconLast = "";
 let faviconChecked = 0;
 
-// Swap the fill on the tag carrying a class, leaving the rest of the file be.
-function recolourByClass(svgText, className, fill) {
-  const tag = new RegExp(`<[^>]*class="${className}"[^>]*>`);
-  return svgText.replace(tag, (m) => m.replace(/fill="[^"]*"/, `fill="${fill}"`));
+// The falloff field.js gives the cluster: full size at the centre and beside
+// it, tapering flat to nothing out at the corner cells.
+function faviconDotRadius(dist) {
+  const t = Math.max(0, Math.min(1, (dist - 1) / (FAVICON_CORNER_DIST - 1)));
+  return FAVICON_MAX_R * (1 - t);
 }
 
-function rasterizeToCanvas(svgText, px) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = px;
-      canvas.height = px;
-      canvas.getContext("2d").drawImage(img, 0, 0, px, px);
-      resolve(canvas);
-    };
-    img.onerror = reject;
-    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText);
-  });
+function drawFaviconLattice(ctx, px) {
+  // how far the lattice reaches from its middle: three cells to the outer
+  // column, plus that dot's own radius
+  const reach = FAVICON_CENTER * FAVICON_CELL + faviconDotRadius(FAVICON_CENTER);
+  const unit = (px * (1 - FAVICON_PAD * 2)) / (reach * 2); // design px to icon px
+  const mid = px / 2;
+  const last = FAVICON_GRID - 1;
+  for (let row = 0; row < FAVICON_GRID; row++) {
+    for (let col = 0; col < FAVICON_GRID; col++) {
+      // the four corner cells are missing from the cluster, on the page and here
+      if ((row === 0 || row === last) && (col === 0 || col === last)) continue;
+      const dx = col - FAVICON_CENTER;
+      const dy = row - FAVICON_CENTER;
+      const r = faviconDotRadius(Math.hypot(dx, dy)) * unit;
+      if (r < 0.15) continue; // smaller than the antialiasing can show
+      ctx.beginPath();
+      ctx.arc(mid + dx * FAVICON_CELL * unit, mid + dy * FAVICON_CELL * unit, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 }
 
 // The palette icon goes in a second link, appended after the static one the
@@ -1513,7 +1530,6 @@ function installFavicon(href) {
 }
 
 function paintFavicon() {
-  if (!faviconStencil) return;
   const style = getComputedStyle(document.documentElement);
   const bg = style.getPropertyValue("--bg").trim();
   const gold = style.getPropertyValue("--gold").trim();
@@ -1528,17 +1544,8 @@ function paintFavicon() {
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, FAVICON_PX, FAVICON_PX);
-
-  // the mark, in the accent: a square of colour cut down to the stencil
-  const tinted = document.createElement("canvas");
-  tinted.width = FAVICON_PX;
-  tinted.height = FAVICON_PX;
-  const tctx = tinted.getContext("2d");
-  tctx.fillStyle = gold;
-  tctx.fillRect(0, 0, FAVICON_PX, FAVICON_PX);
-  tctx.globalCompositeOperation = "destination-in";
-  tctx.drawImage(faviconStencil, 0, 0);
-  ctx.drawImage(tinted, 0, 0);
+  ctx.fillStyle = gold;
+  drawFaviconLattice(ctx, FAVICON_PX);
 
   installFavicon(canvas.toDataURL("image/png"));
 }
@@ -1554,17 +1561,13 @@ function paintFavicon() {
 // whatever set it and whenever the transition decides to start; paintFavicon
 // returns immediately when the answer has not changed, which is nearly always.
 function followPaletteInFavicon(now) {
-  if (!faviconStencil || now - faviconChecked < FAVICON_STEP_MS) return;
+  if (now - faviconChecked < FAVICON_STEP_MS) return;
   faviconChecked = now;
   paintFavicon();
 }
 
-async function startFavicon(svgText) {
+function startFavicon() {
   try {
-    // ground dropped, mark forced opaque: what is left is the shape's alpha
-    let stencil = recolourByClass(svgText, "logo-ground", "none");
-    stencil = recolourByClass(stencil, "logo-mark", "#ffffff");
-    faviconStencil = await rasterizeToCanvas(stencil, FAVICON_PX);
     paintFavicon();
   } catch {
     // a tab without an icon is not worth breaking the page over
@@ -1741,6 +1744,7 @@ if (typeof ResizeObserver !== "undefined") {
 }
 
 mountLogo();
+startFavicon();
 wireField();
 
 // ==========================================================================

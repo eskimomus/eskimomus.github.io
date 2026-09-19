@@ -101,9 +101,9 @@ const SVG_SOURCE_GOLD = "#B18050";
 const SVG_SOURCE_CREAM = "#FFF2E5";
 const MASK_OPAQUE = "#ffffff"; // alpha-mask helper fill — any fully-opaque color works identically, not a palette color
 
-const GOLD = "#B18050"; // circles, project track background, transport icons' resting-dot color
+const GOLD = "#D79764"; // circles, project track background, transport icons' resting-dot color
 const CREAM = "#FFF2E5"; // play/pause/prev/next/shuffle icons, slider thumb, played-progress fill
-const MUTED = "#9C8979"; // shuffle while it's off — the same "not selected" tone the music tabs use
+const MUTED = "#BCA492"; // shuffle while it's off — the same "not selected" tone the music tabs use
 
 // ---------------------------------------------------------------------------
 // Grid metrics, in *design pixels* measured off the Figma frame (1920 wide):

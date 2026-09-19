@@ -19,12 +19,12 @@
 @property --bg {
   syntax: "<color>";
   inherits: true;
-  initial-value: #242228;
+  initial-value: #181308;
 }
 @property --gold {
   syntax: "<color>";
   inherits: true;
-  initial-value: #b18050;
+  initial-value: #d79764;
 }
 @property --cream {
   syntax: "<color>";
@@ -46,27 +46,27 @@
 @property --dot-1 {
   syntax: "<color>";
   inherits: true;
-  initial-value: #b18050;
+  initial-value: #d79764;
 }
 @property --dot-2 {
   syntax: "<color>";
   inherits: true;
-  initial-value: #b18050;
+  initial-value: #d79764;
 }
 @property --dot-3 {
   syntax: "<color>";
   inherits: true;
-  initial-value: #b18050;
+  initial-value: #d79764;
 }
 @property --dot-4 {
   syntax: "<color>";
   inherits: true;
-  initial-value: #b18050;
+  initial-value: #d79764;
 }
 @property --dot-5 {
   syntax: "<color>";
   inherits: true;
-  initial-value: #b18050;
+  initial-value: #d79764;
 }
 
 :root {
@@ -78,14 +78,14 @@
   --content-top: 115.8rem;
 
   /* palette — the only place hex values live */
-  --bg: #242228;
-  --gold: #b18050;
+  --bg: #181308;
+  --gold: #d79764;
   --cream: #fff2e5;
-  --dot-1: #b18050;
-  --dot-2: #b18050;
-  --dot-3: #b18050;
-  --dot-4: #b18050;
-  --dot-5: #b18050;
+  --dot-1: #d79764;
+  --dot-2: #d79764;
+  --dot-3: #d79764;
+  --dot-4: #d79764;
+  --dot-5: #d79764;
 
   /* how long a palette change takes; setPalette can override it per call */
   --palette-fade: 600ms;
@@ -98,7 +98,7 @@
        lightness: 0.377 of the headroom left above the accent (bounded, so it
                   can never blow past white however light the accent is)
        chroma:    held at 0.94, hue untouched
-     Against this palette that resolves to exactly #dbab7d from #b18050. */
+     Against this palette that resolves to #f7b988 from #d79764. */
   --hover-lift: 0.377;
   --hover-chroma: 0.94;
   --hover: oklch(
@@ -108,12 +108,13 @@
   /* The passive tone — unselected menu items, genre tags, track details, the
      shuffle button while it's off, "(wip)". It used to be a flat #9c8979
      that stayed warm-grey however cool the accent went. Measured in oklch
-     against the default accent, that grey turns out to be the accent itself
-     with the colour taken almost all the way out:
+     against the accent it was drawn beside, that grey turns out to be the
+     accent itself with the colour taken almost all the way out:
        #b18050  L 0.63799  C 0.08839  H 64.5
        #9c8979  L 0.64274  C 0.03274  H 62.3
      — same lightness (x1.007), same hue, chroma cut to 0.370. Written that
-     way it reproduces #9c8979 exactly on the default palette, and every
+     way it reproduced #9c8979 exactly on the palette it was derived from,
+     and gives #bca492 on the one in force now. Every
      other palette gets a passive tone of its own warmth: warm under kletka,
      cool under kylskap, still neutral under the two accents that are
      already grey. Derived rather than transitioned, so it rides --gold's
