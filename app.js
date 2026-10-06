@@ -176,6 +176,8 @@ const MASK_SOURCES = [
   ["--mask-view-list", "./assets/view-list.svg", 150],
   ["--mask-view-field", "./assets/view-field.svg", 645],
   ["--mask-view-smile", "./assets/view-smile.svg", 213], // 3x its 71 box
+  ["--mask-handle", "./assets/handle-pill.svg", 1851], // 3x its 617 box
+  ["--mask-handle-close", "./assets/handle-close.svg", 246],
 ];
 
 // the rasterised bitmaps, kept by token — bakeArtwork below needs the pixels,
@@ -1270,6 +1272,9 @@ function wireField() {
     const contact = CONTACTS.find((c) => c.id === id);
     if (contact) {
       if (contact.href) window.open(contact.href, "_blank", "noopener");
+      // nothing to open, but something to read: discord has a handle rather
+      // than an address, so its circle raises the popup instead
+      else if (contact.handle) openHandlePopup(contact.handle);
       return;
     }
     if (PROJECTS.some((p) => p.id === id)) {
@@ -1572,6 +1577,58 @@ function startFavicon() {
   } catch {
     // a tab without an icon is not worth breaking the page over
   }
+}
+
+// --------------------------------------------------------------------------
+// The handle popup
+// --------------------------------------------------------------------------
+// Raised by a contact that has a handle instead of an address — discord,
+// where there is nothing to link to. The sheet behind it is part of the
+// control: a press anywhere on it closes, as does the button and Escape.
+const handlePopup = document.getElementById("handlePopup");
+const handleCard = document.getElementById("handleCard");
+const handleName = document.getElementById("handleName");
+const handleClose = document.getElementById("handleClose");
+let handleHideTimer = 0;
+
+function openHandlePopup(handle) {
+  if (!handlePopup || !handle) return;
+  clearTimeout(handleHideTimer);
+  handleName.textContent = handle;
+  handlePopup.hidden = false;
+  // laid out one frame, told to arrive the next: set both at once and there
+  // is no "from" for the transition to leave, so it simply appears
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => handlePopup.classList.add("is-open"));
+  });
+  handleClose.focus({ preventScroll: true });
+}
+
+function closeHandlePopup() {
+  if (!handlePopup || handlePopup.hidden) return;
+  handlePopup.classList.remove("is-open");
+  clearTimeout(handleHideTimer);
+  // taken out of the document only once it has finished leaving
+  handleHideTimer = setTimeout(() => {
+    handlePopup.hidden = true;
+  }, cssMs("--popup-fade", 280) + 40);
+}
+
+if (handlePopup) {
+  handlePopup.addEventListener("mousedown", (event) => {
+    // field.js hit-tests circles from a listener on the window, so a press on
+    // the sheet would also reach the field underneath and pick one up
+    event.stopPropagation();
+    if (!handleCard.contains(event.target)) closeHandlePopup();
+  });
+  handlePopup.addEventListener("touchstart", (event) => {
+    event.stopPropagation();
+    if (!handleCard.contains(event.target)) closeHandlePopup();
+  });
+  handleClose.addEventListener("click", closeHandlePopup);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeHandlePopup();
+  });
 }
 
 // --------------------------------------------------------------------------

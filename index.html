@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Tomorrow:wght@400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=76" />
+    <link rel="stylesheet" href="./styles.css?v=80" />
   </head>
   <body>
     <script>
@@ -208,10 +208,32 @@
       </main>
     </div>
 
-    <script src="./data.js?v=11"></script>
+    <!-- The discord handle. That contact has no address to open — you cannot
+         link to a username — so its circle raises this instead. The dimmed
+         sheet behind is part of the control: a click anywhere on it closes,
+         same as the button. -->
+    <div class="handle-popup" id="handlePopup" hidden>
+      <div
+        class="handle-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="handleName"
+        id="handleCard"
+      >
+        <!-- The pill is its own layer because it is masked, and a mask clips
+             what sits inside it: with the button a child of the masked box,
+             the part of it hanging past the pill's corner was cut away. -->
+        <div class="handle-pill">
+          <span class="handle-name" id="handleName"></span>
+        </div>
+        <button class="handle-close" type="button" id="handleClose" aria-label="close">x</button>
+      </div>
+    </div>
+
+    <script src="./data.js?v=12"></script>
     <script src="./feed-data.js?v=23"></script>
     <script src="./music-data.js?v=28"></script>
     <script src="./field.js?v=71"></script>
-    <script src="./app.js?v=98"></script>
+    <script src="./app.js?v=100"></script>
   </body>
 </html>

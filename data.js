@@ -164,6 +164,7 @@ const CONTACTS = [
     "id": "discord",
     "title": "discord",
     "icon": "./assets/contacts/discord.svg",
-    "href": null
+    "href": null,
+    "handle": "@matthew_swan"
   }
 ];

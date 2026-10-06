@@ -123,6 +123,19 @@
   --muted-chroma: 0.3704;
   --muted: oklch(from var(--gold) calc(l * var(--muted-lift)) calc(c * var(--muted-chroma)) h);
 
+  /* The handle popup's close button: the accent taken a long way down.
+     Measured in oklch off the two colours in the frame, #573e2b is #d79764
+     with its lightness at 0.531 and its chroma at 0.453, hue untouched — so
+     written this way it reproduces the design exactly on this palette, and
+     darkens any other accent by the same amount rather than sitting on one
+     brown whatever the page is wearing. */
+  --close-lift: 0.53121;
+  --close-chroma: 0.45271;
+  --close: oklch(from var(--gold) calc(l * var(--close-lift)) calc(c * var(--close-chroma)) h);
+
+  /* how long the popup takes to arrive and to leave */
+  --popup-fade: 280ms;
+
   /* one section's content fading out before the next fades in */
   --tab-fade: 260ms;
 
@@ -200,6 +213,8 @@
   --mask-view-list: url("./assets/view-list.svg");
   --mask-view-field: url("./assets/view-field.svg");
   --mask-view-smile: url("./assets/view-smile.svg");
+  --mask-handle: url("./assets/handle-pill.svg");
+  --mask-handle-close: url("./assets/handle-close.svg");
 }
 
 /* Which of the five an element was dealt. The number is fixed when the
@@ -1863,4 +1878,119 @@ a.music-credit:hover {
 /* a post with no picture yet keeps the board's plain gold circle */
 .feed-image .feed-image-empty {
   background: var(--gold);
+}
+
+/* ==========================================================================
+   The handle popup — Figma frame 87:10
+   --------------------------------------------------------------------------
+   Raised by the discord circle in contacts, which is the one contact with no
+   address behind it. A pill in the accent carrying the handle, with a round
+   close button sitting over its top-right corner, on a sheet that dims the
+   page behind. Clicking the sheet closes it, same as the button.
+
+   Every size is the frame's own: the pill 612x116 at radius 46, the button 77
+   across, both typefaces at 60, the handle in the page's background colour
+   and the cross in cream.
+   ========================================================================== */
+.handle-popup:not([hidden]) {
+  display: grid;
+}
+
+.handle-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  place-items: center;
+  /* "a little", not a blackout: the pill is bright enough against the page
+     that it only needs the background taken down a step */
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity var(--popup-fade) linear;
+}
+
+.handle-popup.is-open {
+  opacity: 1;
+}
+
+/* The card rises a touch as it arrives and sinks back as it goes, on the
+   same curve everything else here moves on. Transform and opacity only, so
+   it is the compositor's work and not a relayout. */
+.handle-card {
+  position: relative;
+  /* the shape's own box, 612x116 plus the 2.2 of bleed the wobble needs on
+     each side — the file is the Figma export, filter and all */
+  width: 61.7rem;
+  height: 12.1rem;
+  opacity: 0;
+  transform: translateY(1.6rem) scale(0.94);
+  transition:
+    opacity var(--popup-fade) var(--ease),
+    transform var(--popup-fade) var(--ease);
+}
+
+.handle-popup.is-open .handle-card {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* The masked layer. It is separate from .handle-card because a mask clips
+   its descendants, and the close button deliberately hangs outside the
+   pill — as a child of the masked box its overhanging half was cut off. */
+.handle-pill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gold);
+  mask-image: var(--mask-handle);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--mask-handle);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.handle-name {
+  font-family: "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 1;
+  color: var(--bg);
+  user-select: text;
+  white-space: nowrap;
+}
+
+/* Hung off the pill's top-right corner exactly as the frame has it: the
+   button's own 77 sits 568 along the pill and 44 above it, and both boxes
+   carry the same 2.2 of wobble bleed, so the two offsets come out unchanged. */
+.handle-close {
+  position: absolute;
+  left: 56.8rem;
+  top: -4.4rem;
+  width: 8.2rem;
+  height: 8.1rem;
+  padding: 0;
+  border: 0;
+  background: var(--close);
+  mask-image: var(--mask-handle-close);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: var(--mask-handle-close);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  color: var(--cream);
+  font-family: "ZCOOL KuaiLe", "Tomorrow", system-ui, sans-serif;
+  font-size: 6rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--tab-fade) linear;
+}
+
+/* lifted, not turned into the accent: the button sits on the accent, so
+   hovering it to the same colour would dissolve it into the pill */
+.handle-close:hover {
+  background: oklch(from var(--close) calc(l * 1.28) c h);
 }
